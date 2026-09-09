@@ -10,6 +10,7 @@ use App\Http\Controllers\PosController;
 use App\Http\Controllers\ProductController;
 use App\Http\Controllers\SalesController;
 use App\Http\Controllers\StockController;
+use App\Http\Controllers\StockistController;
 use App\Http\Controllers\StoreController;
 use App\Http\Controllers\SupplierController;
 use App\Http\Controllers\UserController;
@@ -133,4 +134,10 @@ Route::group(['prefix' => "pos", 'middleware' => "auth:sanctum"], function () {
 
     Route::post('place', [PosController::class, 'place']);
     Route::get('/', [PosController::class, 'index']);
+});
+
+Route::group(['prefix' => "stockist", 'middleware' => "auth:sanctum"], function () {
+    Route::get('home', [StockistController::class, 'home']);
+    Route::post('search', [StockistController::class, 'searchProduct']);
+    Route::post('store', [StockistController::class, 'store']);
 });

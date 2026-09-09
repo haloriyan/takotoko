@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\AdminController;
+use App\Http\Controllers\AdminUserController;
 use Illuminate\Support\Facades\Route;
 
 Route::group(['prefix' => "admin"], function () {
@@ -9,5 +10,9 @@ Route::group(['prefix' => "admin"], function () {
         Route::get('dashboard', [AdminController::class, 'dashboard'])->name('admin.dashboard');
         Route::get('cms', [AdminController::class, 'cms'])->name('admin.cms');
         Route::get('logout', [AdminController::class, 'logout'])->name('admin.logout');
+
+        Route::group(['prefix' => 'master', 'as' => 'admin.master.'], function () {
+            Route::resource('users', AdminUserController::class);
+        });
     });
 });

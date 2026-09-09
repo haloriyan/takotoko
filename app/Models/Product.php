@@ -19,6 +19,11 @@ class Product extends Model
     {
         return $this->hasMany(ProductStock::class, 'product_id');
     }
+    public function available_stocks()
+    {
+        return $this->hasMany(ProductStock::class, 'product_id')
+        ->where('quantity', '>', 0);
+    }
 
     public function stock()
     {

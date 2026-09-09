@@ -81,6 +81,22 @@
         <div class="text-sm flex">Contents</div>
     </a>
 
+    <div class="group relative">
+        <a href="#" class="flex items-center gap-4 text-slate-500 {{ (@$routes[1] == 'master') ? 'bg-primary-transparent text-primary' : '' }}">
+            <div class="h-12 w-1 {{ (@$routes[1] == 'master') ? 'bg-primary' : 'bg-white' }}"></div>
+            <ion-icon name="server-outline" class="{{ (@$routes[1] == 'master') ? 'text-primary' : '' }}"></ion-icon>
+            <div class="text-sm flex grow {{ (@$routes[1] == 'master') ? 'text-primary' : '' }}">Master Data</div>
+            <ion-icon name="chevron-down-outline" class="me-4"></ion-icon>
+        </a>
+        <div class="{{ (@$routes[1] == 'master') ? 'flex' : 'hidden' }} group-hover:flex flex-col mt-2 mb-2">
+            <a href="{{ route('admin.master.users.index') }}" class="flex items-center gap-4 text-slate-500">
+                <div class="h-10 w-1 bg-white"></div>
+                <ion-icon name="ellipse-outline" class="text-[8px] {{ (@$routes[2] == 'users') ? 'text-primary' : '' }}"></ion-icon>
+                <div class="text-sm flex grow {{ (@$routes[2] == 'users') ? 'text-primary' : '' }}">Users</div>
+            </a>
+        </div>
+    </div>
+
     {{-- @if (in_array($role, ['admin']))
         <div class="group relative">
             <a href="#" class="flex items-center gap-4 text-slate-500 {{ $routes[1] == 'settings' ? 'bg-primary-transparent text-primary' : '' }}">
