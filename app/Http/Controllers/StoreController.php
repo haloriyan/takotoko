@@ -16,6 +16,7 @@ use App\Models\UserStore;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 
 class StoreController extends Controller
@@ -60,6 +61,35 @@ class StoreController extends Controller
 
         return response()->json([
             'store' => $store,
+        ]);
+    }
+    public function update(Request $request) {
+        $user = $request->user();
+        $storeID = $user->access->store_id;
+        $sto = Store::where('id', $storeID);
+        $store = $sto->first();
+
+        $toUpdate = [
+            'name' => $request->name,
+        ];
+
+        if ($request->hasFile('icon')) {
+            $icon = $request->file('icon');
+            $iconFileName = $storeID."_".$icon->getClientOriginalName();
+            $toUpdate['icon'] = $iconFileName;
+            $icon->move(
+                public_path('storage/store_icons'), $iconFileName
+            );
+
+            if ($store->icon != null) {
+                Storage::delete('public/store_icons/' . $store->icon);
+            }
+        }
+
+        $sto->update($toUpdate);
+
+        return response()->json([
+            'message' => "Perubahan berhasil disimpan"
         ]);
     }
 
@@ -111,7 +141,7 @@ class StoreController extends Controller
     {
         $user = $request->user();
         $categories = Category::where('store_id', $user->access->store_id)
-            ->with(['products'])
+            ->with(['products:id,store_id'])
             ->orderBy('position', 'ASC')->get();
 
         return response()->json([
@@ -122,12 +152,22 @@ class StoreController extends Controller
     public function product(Request $request)
     {
         $user = $request->user();
-        $products = Product::where('store_id', $user->access->store_id)
+        $categoryID = $request->category_id;
+
+        $prod = Product::where('store_id', $user->access->store_id);
+
+        if ($categoryID) {
+            $prod = $prod->whereHas('categories', function ($query) use ($categoryID) {
+                $query->where('category_id', $categoryID);
+            });
+        }
+
+        $products = $prod
             ->with(['images', 'categories'])
             ->withSum(['stocks as valid_stock' => function ($query) {
                 $query->validAvailable();
             }], 'quantity')
-            ->paginate(25);
+            ->paginate(1);
 
         return response()->json([
             'products' => $products,
@@ -147,7 +187,21 @@ class StoreController extends Controller
     public function customer(Request $request)
     {
         $user = $request->user();
-        $customers = Customer::where('store_id', $user->access->store_id)->paginate(25);
+        $storeID = $user->access->store_id;
+        
+        $filter = [
+            ['store_id', $storeID]
+        ];
+
+        if ($request->q != "") {
+            array_push($filter, ['name', 'LIKE', '%'.$request->q.'%']);
+        }
+
+        $customers = Customer::where($filter)
+        ->with([
+            'sales:id,customer_id'
+        ])
+        ->paginate(25);
 
         return response()->json([
             'customers' => $customers,

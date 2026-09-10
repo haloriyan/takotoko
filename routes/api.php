@@ -54,12 +54,14 @@ Route::group(['prefix' => "blog"], function () {
 Route::group(['prefix' => 'store'], function () {
     Route::group(['middleware' => 'auth:sanctum'], function () {
         Route::post('onboarding', [StoreController::class, 'onboarding']);
+        Route::post('update', [StoreController::class, 'update']);
 
         Route::group(['prefix' => "customer"], function () {
             Route::get('/', [StoreController::class, 'customer']);
             Route::post('store', [CustomerController::class, 'store']);
             Route::post('{id}/update', [CustomerController::class, 'update']);
             Route::get('{id}/delete', [CustomerController::class, 'delete']);
+            Route::get('{id}/detail', [CustomerController::class, 'detail']);
             Route::get('search', [CustomerController::class, 'search']);
         });
 

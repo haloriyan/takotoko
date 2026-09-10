@@ -35,6 +35,9 @@ class Product extends Model
     {
         return $this->belongsToMany(Category::class, 'product_categories');
     }
+    public function raw_categories() {
+        return $this->hasMany(ProductCategory::class, 'product_id');
+    }
     public function image_labels() {
         return $this->hasMany(ProductImageLabel::class, 'product_id');
     }

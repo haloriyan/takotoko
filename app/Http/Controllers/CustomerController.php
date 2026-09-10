@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Http\Requests\CustomerStoreRequest;
 use App\Http\Requests\CustomerUpdateRequest;
 use App\Models\Customer;
+use App\Models\Sales;
 use Illuminate\Http\Request;
 
 class CustomerController extends Controller
@@ -90,6 +91,27 @@ class CustomerController extends Controller
 
         return response()->json([
             'message' => 'Berhasil menghapus customer '.$customer->name,
+        ]);
+    }
+
+    public function detail(Request $request, $id) {
+        $user = $request->user();
+        $storeID = $user->access->store_id;
+        $customer = Customer::where('id', $id)->where('store_id', $storeID)->first();
+
+        $sales = Sales::where([
+            ['customer_id', $customer->id],
+        ])
+        ->with([
+            'items.product.images'
+        ])
+        ->orderBy('created_at', 'DESC')
+        ->take(10)
+        ->get();
+
+        return response()->json([
+            'message' => 'Berhasil mengambil data customer '.$customer->name,
+            'sales' => $sales,
         ]);
     }
 }
