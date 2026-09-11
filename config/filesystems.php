@@ -29,6 +29,11 @@ return [
     */
 
     'disks' => [
+        'mine' => [
+            'driver' => 'local',
+            'root' => public_path('storage'),
+            'visibility' => "public",
+        ],
 
         'local' => [
             'driver' => 'local',

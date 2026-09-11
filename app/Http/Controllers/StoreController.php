@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Exports\SalesReport;
 use App\Models\Category;
 use App\Models\Customer;
 use App\Models\Product;
@@ -18,6 +19,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
+use Maatwebsite\Excel\Facades\Excel;
 
 class StoreController extends Controller
 {
@@ -167,7 +169,7 @@ class StoreController extends Controller
             ->withSum(['stocks as valid_stock' => function ($query) {
                 $query->validAvailable();
             }], 'quantity')
-            ->paginate(1);
+            ->paginate(20);
 
         return response()->json([
             'products' => $products,
@@ -211,22 +213,50 @@ class StoreController extends Controller
     public function salesReport(Request $request) {
         $startDate = Carbon::parse($request->start_date)->startOfDay();
         $endDate = Carbon::parse($request->end_date)->endOfDay();
+
         $user = $request->user();
         $storeID = $user->access->store_id;
         $filter = [['store_id', $storeID]];
 
-        if ($request->user_id) {
-            // array_push($filter, ['user_id', $request->user_id]);
-        }
-
-        $query = Sales::where($filter)
-            ->whereBetween('created_at', [$startDate->format('Y-m-d H:i:s'), $endDate->format('Y-m-d H:i:s')])
+        $query = Sales::where('store_id', $storeID)
+            ->whereBetween('created_at', [
+                $startDate->format('Y-m-d H:i:s'),
+                $endDate->format('Y-m-d H:i:s')
+            ])
             ->orderBy('created_at', 'DESC');
 
         $omset = $query->sum('total_price');
         $margin = $query->sum('total_margin');
 
-        $sales = (clone $query)->with(['user', 'customer'])->paginate(25);
+        $sl = clone $query;
+
+        if ($request->q != "") {
+            $sl->whereHas('customer', function ($q) use ($request) {
+                $q->where('name', 'LIKE', '%'.$request->q.'%');
+            });
+        }
+
+        if ($request->download == 1) {
+            $sales = $sl->with(['user', 'customer'])->get();
+            $store = $user->access->store;
+            $timestamp = Carbon::now()->isoFormat('DD_MMMM_YYYY_HH:mm:ss');
+
+            $filename = "Laporan_Penjualan_" . Str::slug($store->name, '_') . "-Exported_at_".$timestamp.".xlsx";
+
+            $exp = Excel::store(
+                new SalesReport([
+                    'sales' => $sales,
+                    'store' => $store,
+                    'start_date' => $startDate->format('Y-m-d'),
+                    'end_date' => $endDate->format('Y-m-d'),
+                ]),
+                'ekspor/' . $filename,
+                'mine'
+            );
+
+            return response()->json(['ok']);
+        }
+        $sales = $sl->with(['user', 'customer'])->paginate(15);
 
         $volumeData = Sales::where($filter)
             ->whereBetween('created_at', [$startDate->format('Y-m-d H:i:s'), $endDate->format('Y-m-d H:i:s')])
@@ -234,21 +264,49 @@ class StoreController extends Controller
             ->groupBy('date')
             ->pluck('count', 'date');
 
+        $omsetData = Sales::where($filter)
+            ->whereBetween('created_at', [$startDate->format('Y-m-d H:i:s'), $endDate->format('Y-m-d H:i:s')])
+            ->selectRaw('DATE(created_at) as date, SUM(total_price) as revenue')
+            ->groupBy('date')
+            ->pluck('revenue', 'date');
+
+        $marginData = Sales::where($filter)
+            ->whereBetween('created_at', [$startDate->format('Y-m-d H:i:s'), $endDate->format('Y-m-d H:i:s')])
+            ->selectRaw('DATE(created_at) as date, SUM(total_margin) as margin')
+            ->groupBy('date')
+            ->pluck('margin', 'date');
+
+        $omsetChart = [];
+        $marginChart = [];
         $volume = [];
         $current = $startDate->copy();
         while ($current <= $endDate) {
             $dateStr = $current->format('Y-m-d');
+            $revenue = $omsetData[$dateStr] ?? 0;
+            $marg = $marginData[$dateStr] ?? 0;
+
             $volume[] = [
-                'date' => $dateStr,
+                'date' => Carbon::parse($dateStr)->isoFormat('DD MMM'),
                 'count' => $volumeData[$dateStr] ?? 0
             ];
+            $omsetChart[] = [
+                'date' => Carbon::parse($dateStr)->isoFormat('DD MMM'),
+                'revenue' => (int) $revenue ?? 0
+            ];
+            $marginChart[] = [
+                'date' => Carbon::parse($dateStr)->isoFormat('DD MMM'),
+                'margin' => (int) $marg ?? 0
+            ];
+
             $current->addDay();
         }
 
         return response()->json([
             'sales' => $sales,
             'omset' => $omset,
+            'omset_chart' => $omsetChart,
             'margin' => $margin,
+            'margin_chart' => $marginChart,
             'volume' => $volume,
         ]);
     }
