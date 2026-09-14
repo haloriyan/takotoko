@@ -25,7 +25,7 @@ class UserController extends Controller
         $plans = config('plans');
 
         if ($user) {
-            $user = User::where('id', $user->id)->with(['accesses.store.plan', 'access.store.plan'])->first();
+            $user = User::where('id', $user->id)->with(['accesses.store.active_plan', 'access.store.active_plan'])->first();
             $needRefetch = false;
 
             if ($user->accesses->count() == 0) {
@@ -60,7 +60,7 @@ class UserController extends Controller
             }
 
             if ($needRefetch) {
-                $user = User::where('id', $user->id)->with(['accesses.store', 'access.store'])->first();
+                $user = User::where('id', $user->id)->with(['accesses.store.active_plan', 'access.store.active_plan'])->first();
             }
         }
 

@@ -16,4 +16,15 @@ class Store extends Model
             StorePlan::class, 'store_id'
         )->orderBy('expired_at', 'DESC');
     }
+    public function plans() {
+        return $this->hasMany(
+            StorePlan::class, 'store_id'
+        );
+    }
+    public function active_plan() {
+        return $this->hasOne(
+            StorePlan::class, 'store_id'
+        )->where('payment_status', 'PAID')
+        ->orderBy('created_at', 'DESC');
+    }
 }

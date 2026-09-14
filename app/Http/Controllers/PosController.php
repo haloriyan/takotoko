@@ -16,7 +16,124 @@ use Illuminate\Support\Facades\Log;
 
 class PosController extends Controller
 {
-    public function index(Request $request) {
+    public function index(Request $request)
+    {
+        $user = $request->user();
+        $storeID = $user->access->store_id;
+        $store = $user->access->store;
+        $canAdd = false;
+        $canScan = false;
+
+        $plan = paket($storeID);
+        $thePlan = config('plans')[$plan->plan];
+        $canScan = $thePlan['ai'];
+
+        if (gettype($thePlan['transaksi']) == "integer") {
+            $salesCount = Sales::where('store_id', $storeID)
+            ->whereBetween('created_at', [
+                Carbon::now()->startOfDay()->format('Y-m-d H:i:s'),
+                Carbon::now()->endOfDay()->format('Y-m-d H:i:s'),
+            ])
+            ->get(['id'])->count();
+            $canAdd = $salesCount < $thePlan['transaksi'];
+        } else {
+            $canAdd = true;
+        }
+
+        if (!$canAdd) {
+            return response()->json([
+                'categories' => [],
+                'carts' => [],
+                'can_add' => $canAdd,
+                'can_scan' => false,
+            ]);
+        }
+
+        $carts = Cart::where([
+            ['user_id', $user->id],
+        ])
+        ->with([
+            'product.images',
+            'stock',
+        ])
+        ->get();
+
+        $inventoryMethod = strtoupper($store->inventory_method);
+        $today = now()->toDateString();
+
+        $stockQuery = function ($query) use ($inventoryMethod, $today) {
+            $query->where('quantity', '>', 0)
+                ->where(function ($q) use ($today) {
+                    $q->whereNull('expired_at')
+                        ->orWhereDate('expired_at', '>=', $today);
+                });
+
+            switch ($inventoryMethod) {
+                case 'FIFO':
+                    $query->orderBy('created_at');
+                    break;
+
+                case 'LIFO':
+                    $query->orderByDesc('created_at');
+                    break;
+
+                case 'FEFO':
+                    $query->orderByRaw('expired_at IS NULL')
+                        ->orderBy('expired_at')
+                        ->orderBy('created_at');
+                    break;
+
+                case 'CHEAPEST':
+                    $query->orderBy('cost_price')
+                        ->orderBy('created_at');
+                    break;
+            }
+
+            $query->take(1);
+        };
+
+        $categories = Category::where([
+            ['store_id', $storeID],
+            ['pos_available', true],
+        ])
+        ->whereHas('products.stock', $stockQuery)
+        ->with([
+            'products' => function ($query) use ($stockQuery) {
+                $query->whereHas('stock', $stockQuery);
+            },
+            'products.images',
+            'products.stock' => $stockQuery,
+        ])
+        ->orderBy('position', 'ASC')
+        ->get();
+
+        $uncategorizedProducts = Product::where('store_id', $storeID)
+            ->whereDoesntHave('categories')
+            ->whereHas('stock', $stockQuery)
+            ->with([
+                'images',
+                'stock' => $stockQuery,
+            ])
+            ->get();
+
+        $categories->push(collect([
+            'store_id' => $storeID,
+            'name' => 'Lainnya',
+            'icon' => null,
+            'color' => '#2196f3',
+            'position' => $categories->count(),
+            'pos_available' => true,
+            'products' => $uncategorizedProducts,
+        ]));
+
+        return response()->json([
+            'categories' => $categories,
+            'carts' => $carts,
+            'can_add' => $canAdd,
+            'can_scan' => $canScan,
+        ]);
+    }
+    public function indexOri(Request $request) {
         $user = $request->user();
         $storeID = $user->access->store_id;
         $store = $user->access->store;
@@ -78,6 +195,22 @@ class PosController extends Controller
         ])
         ->orderBy('position', 'ASC')
         ->get();
+
+        // Continue this
+        $uncategorizedProducts = Product::where('store_id', $storeID)
+        ->whereDoesntHave('categories')
+        ->with([
+            'images', 'stock'
+        ])
+        ->get();
+
+        $categories[] = collect([
+            'store_id' => $storeID,
+            'name' => "Lainnya",
+            'icon' => null, 'color' => "#2196f3", 'position' => count($categories) - 1,
+            'pos_available' => true,
+            'products' => $uncategorizedProducts,
+        ]);
 
         $carts = Cart::where([
             ['user_id', $user->id],

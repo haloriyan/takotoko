@@ -3,7 +3,8 @@
 return [
     'whitelist_emails' => [
         'takotekno.com@gmail.com',
-        'kasir@gmail.com', 'gudang@gmail.com'
+        'kasir@gmail.com', 'gudang@gmail.com',
+        'riyan.satria.619@gmail.com'
     ],
 
     /*

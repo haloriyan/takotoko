@@ -1,5 +1,6 @@
 <?php
 
+use App\Models\Store;
 use App\Models\User;
 use Carbon\Carbon;
 use Illuminate\Support\Facades\Auth;
@@ -11,8 +12,14 @@ function me($guard = 'admin') {
     $user = Auth::guard($guard)->user();
 	return $user;
 }
-function wasap() {
-	// 
+function paket($store) {
+	if (gettype($store) == "integer") {
+		$store = Store::where('id', $store)->with([
+			'active_plan'
+		])->first();
+	}
+
+	return $store->active_plan;
 }
 function nullify($value) {
 	return $value === "null" ? null : $value;

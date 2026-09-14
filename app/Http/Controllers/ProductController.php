@@ -66,7 +66,7 @@ class ProductController extends Controller
     public function store(Request $request)
     {
         $user = $request->user();
-        $storeID = $user->access_id;
+        $storeID = $user->access->store_id;
         $categories = json_decode($request->categories, false);
         $images = $request->file('images');
         $imagesPayload = json_decode($request->images_payload);

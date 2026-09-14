@@ -102,8 +102,15 @@ class StoreController extends Controller
         $quantity = $request->quantity;
         $plans = config('plans');
         $paket = $plans[$request->plan];
+        $plan = $user->access->store->plan;
 
         $lastExpiredAt = StorePlan::where('store_id', $storeID)->max('expired_at');
+        
+        if ($plan->plan != "basic" && $plan->plan != $request->plan) {
+            $lastExpiredAt = Carbon::now()->format('Y-m-d H:i:s');
+        } else {
+            $lastExpiredAt = $plan->expired_at;
+        }
         $baseDate = ($lastExpiredAt && Carbon::parse($lastExpiredAt)->isFuture())
             ? Carbon::parse($lastExpiredAt)
             : Carbon::now();
@@ -148,13 +155,26 @@ class StoreController extends Controller
 
         return response()->json([
             'categories' => $categories,
+            'can_add' => true,
         ]);
     }
 
     public function product(Request $request)
     {
         $user = $request->user();
+        $storeID = $user->access->store_id;
         $categoryID = $request->category_id;
+        $canAdd = false;
+
+        $plan = $user->access->store->active_plan;
+        $thePlan = config('plans')[$plan->plan];
+
+        if (gettype($thePlan['produk']) == "integer") {
+            $productsCount = Product::where('store_id', $storeID)->get(['id'])->count();
+            $canAdd = $productsCount < $thePlan['produk'];
+        } else {
+            $canAdd = true;
+        }
 
         $prod = Product::where('store_id', $user->access->store_id);
 
@@ -173,6 +193,7 @@ class StoreController extends Controller
 
         return response()->json([
             'products' => $products,
+            'can_add' => $canAdd,
         ]);
     }
 
@@ -375,6 +396,17 @@ class StoreController extends Controller
         $user = $request->user();
         $storeID = $user->access->store_id;
         $role = $request->role;
+        $canAdd = false;
+        $paket = paket($storeID);
+
+        if ($paket != null) {
+            $employeesCount = UserStore::where('store_id', $storeID)->get(['id'])->count() - 1;
+            $pricing = config('plans')[$paket->plan];
+
+            if ($employeesCount < $pricing['karyawan']) {
+                $canAdd = true;
+            }
+        }
 
         $filter = [
             ['store_id', $storeID]
@@ -390,6 +422,7 @@ class StoreController extends Controller
 
         return response()->json([
             'employees' => $employees,
+            'can_add' => $canAdd
         ]);
     }
 }
