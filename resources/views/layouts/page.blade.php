@@ -132,8 +132,8 @@
     </div>
 
     <div class="flex items-center gap-4">
-        <a href="#" class="bg-primary text-white text-xs font-medium rounded-full p-3 px-5">
-            Coba Sekarang
+        <a href="{{ env('GPLAY_URL') }}" target="_blank">
+            <img src="/images/GiO_GPlay.png" alt="Get it On Google Play" class="h-10">
         </a>
         <button id="mobile-menu-button" class="md:hidden text-2xl">
             <ion-icon name="menu-outline"></ion-icon>

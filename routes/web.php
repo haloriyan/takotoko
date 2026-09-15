@@ -25,6 +25,7 @@ Route::get('kebijakan-privasi', [PageController::class, 'privacyPolicy'])->name(
 Route::get('faq', [PageController::class, 'faq'])->name('about.faq');
 Route::get('hubungi-kami', [PageController::class, 'contact'])->name('about.contact');
 Route::get('pricing', [PageController::class, 'pricing'])->name('pricing');
+Route::match(['get', 'post'], 'delete-account', [PageController::class, 'deleteAccount'])->name('delAccount');
 
 Route::group(['prefix' => "panduan"], function () {
     Route::get('/', [PageController::class, 'panduan'])->name('panduan');

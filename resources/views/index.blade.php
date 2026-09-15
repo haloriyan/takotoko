@@ -1,5 +1,7 @@
 @extends('layouts.page')
 
+@section('title', "Home")
+
 @section('content')
 <section class="w-full aspect-[16/9] flex mobile:flex-col items-center gap-10 p-20 mobile:p-8">
     <div class="flex flex-col mobile:items-center mobile:text-center gap-4 w-6/12 mobile:w-full mobile:pt-8">
@@ -18,10 +20,13 @@
         </div>
 
         <div class="flex items-center gap-6 mobile:gap-4 mt-8 mobile:mt-2">
-            <a href="{{ env('GPLAY_URL') }}" class="p-4 mobile:p-3 px-8 mobile:px-5 rounded-lg mobile:text-xs border border-primary bg-primary text-white font-medium" target="_blank">
+            {{-- <a href="{{ env('GPLAY_URL') }}" class="p-4 mobile:p-3 px-8 mobile:px-5 rounded-lg mobile:text-xs border border-primary bg-primary text-white font-medium" target="_blank">
                 Coba Sekarang
+            </a> --}}
+            <a href="{{ env('GPLAY_URL') }}" target="_blank">
+                <img src="/images/GiO_GPlay.png" alt="Get it On Google Play" class="h-14 mobile:h-10">
             </a>
-            <a href="#" class="p-4 mobile:p-3 px-8 mobile:px-5 rounded-lg mobile:text-xs border">
+            <a href="#" class="p-4 mobile:p-3 px-8 mobile:px-5 rounded-lg bg-white hover:bg-slate-100 mobile:text-xs border">
                 Selengkapnya
             </a>
         </div>
@@ -250,10 +255,44 @@
         <div class="w-20 h-20 flex items-center justify-center rounded-lg bg-purple-100">
             <ion-icon name="bar-chart-outline" class="text-4xl text-purple-500"></ion-icon>
         </div>
-        <h4 class="text-lg text-slate-800 font-medium mt-4">Laporan Akurat</h4>
+        <h4 class="text-lg text-slate-800 font-medium mt-4">Laporan Gampang Dibaca.</h4>
         <div class="text-sm mobile:text-xs text-slate-600 leading-7">
             Informasi tentang jualanmu, lengkap dan akurat sesuai data.
         </div>
+    </div>
+</section>
+
+<section class="p-20 mobile:p-8 bg-white grid grid-cols-2 mobile:grid-cols-1 gap-8">
+    <div class="flex flex-col gap-4">
+        <div class="flex items-center gap-4 border rounded-full p-4">
+            <div class="w-16 mobile:w-14 aspect-square rounded-full font-bold text-2xl text-white bg-primary flex items-center justify-center">1</div>
+            <div class="flex flex-col gap-1 basis-32 grow">
+                <div class="text-xl mobile:text-lg text-slate-800 font-medium">Install dan Login.</div>
+                <div class="text-xs text-slate-600">Install di HP lewat Google Play dan Login. Pastikan emailmu aktif.</div>
+            </div>
+        </div>
+        <div class="flex items-center gap-4 border rounded-full p-4">
+            <div class="w-16 mobile:w-14 aspect-square rounded-full font-bold text-2xl text-white bg-primary flex items-center justify-center">2</div>
+            <div class="flex flex-col gap-1 basis-32 grow">
+                <div class="text-xl mobile:text-lg text-slate-800 font-medium">Tambah Produk dan Stok.</div>
+                <div class="text-xs text-slate-600">Isi nama produk dan gambar kemudian tambahkan stok.</div>
+            </div>
+        </div>
+        <div class="flex items-center gap-4 border rounded-full p-4">
+            <div class="w-16 mobile:w-14 aspect-square rounded-full font-bold text-2xl text-white bg-primary flex items-center justify-center">3</div>
+            <div class="flex flex-col gap-1 basis-32 grow">
+                <div class="text-xl mobile:text-lg text-slate-800 font-medium">Buat Order.</div>
+                <div class="text-xs text-slate-600">Klik "+ Buat Order" dan kamu bisa mulai jualan.</div>
+            </div>
+        </div>
+    </div>
+    <div class="flex flex-col gap-4 mobile:py-8">
+        <h3 class="text-[48px] mobile:text-[28px] text-slate-800 font-bold">Segampang itu, Sesimpel itu.</h3>
+        <div class="h-2 w-[30%] bg-primary rounded-full"></div>
+        <div></div><div class="mobile:hidden"></div>
+        <a href="{{ env('GPLAY_URL') }}" target="_blank">
+            <img src="/images/GiO_GPlay.png" alt="CTA Link" class="h-16 mobile:h-10">
+        </a>
     </div>
 </section>
 @endsection

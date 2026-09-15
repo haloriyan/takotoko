@@ -4,7 +4,9 @@ namespace App\Http\Controllers;
 
 use App\Models\CmsCategory;
 use App\Models\CmsContent;
+use App\Models\User;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Session;
 use Illuminate\Support\Str;
 
 class PageController extends Controller
@@ -146,5 +148,26 @@ class PageController extends Controller
     }
     public function panduan() {
         return view('panduan');
+    }
+    public function deleteAccount(Request $request) {
+        if ($request->isMethod('POST')) {
+            $email = $request->email;
+            $user = User::where('email', $email)->first();
+
+            if ($user == null) {
+                return redirect()->back()->withErrors([
+                    'Kami tidak dapat menemukan akun Anda dengan email ' . $email,
+                ]);
+            } else {
+                return redirect()->route('delAccount')->with([
+                    'message' => "Permintaan Anda telah Kami terima. Akun Anda akan terhapus beserta data terkait dalam waktu 1 x 24 jam."
+                ]);
+            }
+        }
+
+        $message = Session::get('message');
+        return view('delete_account', [
+            'message' => $message,
+        ]);
     }
 }
