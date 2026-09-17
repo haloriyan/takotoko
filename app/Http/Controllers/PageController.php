@@ -4,13 +4,48 @@ namespace App\Http\Controllers;
 
 use App\Models\CmsCategory;
 use App\Models\CmsContent;
+use App\Models\Sales;
 use App\Models\User;
+use App\Services\Tripay;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Session;
 use Illuminate\Support\Str;
 
 class PageController extends Controller
 {
+    public function pay(Tripay $tripay) {
+        return env('BASE_URL') . "/api/callback/tripay";
+        // $signature = $tripay->signature([
+        //     'amount' => 15000,
+        //     'merchant_ref' => "INV_123"
+        // ]);
+
+        // $pay = $tripay->pay([
+        //     'method' => "QRIS",
+        //     'merchant_ref' => "INV_123",
+        //     'amount' => 15000,
+        //     'customer_name' => "Riyan Satria",
+        //     'customer_email' => "riyan@gmail.com",
+        //     'signature' => $signature,
+        //     'order_items' => [
+        //         [
+        //             'sku'         => 'O-06',
+        //             'name'        => 'Oreo',
+        //             'price'       => 15000,
+        //             'quantity'    => 1,
+        //             // 'product_url' => 'https://tokokamu.com/product/nama-produk-1',
+        //             // 'image_url'   => 'https://tokokamu.com/product/nama-produk-1.jpg',
+        //         ],
+        //     ]
+        // ]);
+
+        // Log::info(
+        //     json_encode($pay, JSON_PRETTY_PRINT)
+        // );
+
+        return $pay;
+    }
     public function index() {
         return view('index');
     }
@@ -167,6 +202,23 @@ class PageController extends Controller
 
         $message = Session::get('message');
         return view('delete_account', [
+            'message' => $message,
+        ]);
+    }
+    public function receipt(Request $request, $invoiceNumber) {
+        $sales = Sales::where('invoice_number', $invoiceNumber)
+        ->with(['store', 'customer', 'items.product.images', 'review'])
+        ->first();
+        $message = Session::get('message');
+
+        $customerID = $request->customer_id;
+
+        if ($customerID != $sales->customer_id) {
+            return "error";
+        }
+
+        return view('receipt', [
+            'sales' => $sales,
             'message' => $message,
         ]);
     }

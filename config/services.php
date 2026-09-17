@@ -39,4 +39,11 @@ return [
         'keys' => json_decode(env('GEMINI_KEYS', '[]'), true),
     ],
 
+    'tripay' => [
+        'private' => env('TRIPAY_PRIVATE_KEY'),
+        'api' => env('TRIPAY_API_KEY'),
+        'merchant' => env('TRIPAY_MERCHANT_CODE'),
+        'mode' => env('TRIPAY_MODE'),
+    ]
+
 ];

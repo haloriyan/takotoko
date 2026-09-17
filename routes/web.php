@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\PageController;
+use App\Http\Controllers\ReviewController;
 use Illuminate\Support\Facades\Route;
 
 Route::get('/', [PageController::class, 'index'])->name('index');
@@ -26,6 +27,13 @@ Route::get('faq', [PageController::class, 'faq'])->name('about.faq');
 Route::get('hubungi-kami', [PageController::class, 'contact'])->name('about.contact');
 Route::get('pricing', [PageController::class, 'pricing'])->name('pricing');
 Route::match(['get', 'post'], 'delete-account', [PageController::class, 'deleteAccount'])->name('delAccount');
+Route::get('pay', [PageController::class, 'pay']);
+
+Route::get('receipt/{invoice_number}', [PageController::class, 'receipt']);
+Route::group(['prefix' => "receipt/{invoice_number}"], function () {
+    Route::post('review', [ReviewController::class, 'store'])->name('review.store');
+    Route::get('/', [PageController::class, 'receipt']);
+});
 
 Route::group(['prefix' => "panduan"], function () {
     Route::get('/', [PageController::class, 'panduan'])->name('panduan');

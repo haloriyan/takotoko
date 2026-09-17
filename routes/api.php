@@ -86,6 +86,10 @@ Route::group(['prefix' => 'store'], function () {
             Route::get('/', [StoreController::class, 'employee']);
         });
 
+        Route::group(['prefix' => "review"], function () {
+            Route::get('/', [StoreController::class, 'review']);
+        });
+
         Route::group(['prefix' => 'product'], function () {
             Route::post('store', [ProductController::class, 'store']);
             Route::post('scan', [ProductController::class, 'scan']);
@@ -142,4 +146,8 @@ Route::group(['prefix' => "stockist", 'middleware' => "auth:sanctum"], function 
     Route::get('home', [StockistController::class, 'home']);
     Route::post('search', [StockistController::class, 'searchProduct']);
     Route::post('store', [StockistController::class, 'store']);
+});
+
+Route::group(['prefix' => "callback"], function () {
+    Route::post('tripay', [SalesController::class, 'callbackTripay']);
 });

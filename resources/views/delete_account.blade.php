@@ -5,7 +5,7 @@
 @section('content')
 
 <section class="p-20 mobile:p-8 flex justify-center">
-    <form class="bg-white rounded-lg p-8 border shadow w-[60%] flex flex-col gap-4" method="POST">
+    <form class="bg-white rounded-lg p-8 border shadow w-[60%] mobile:w-full flex flex-col gap-4" method="POST">
         <h2 class="text-2xl text-slate-800 font-medium">Hapus Akun</h2>
         <div class="text-sm text-slate-600">
             Ajukan permintaan penghapusan akun dan toko Anda dengan mengisi form di bawah ini.

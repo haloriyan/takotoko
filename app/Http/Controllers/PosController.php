@@ -10,6 +10,7 @@ use App\Models\Sales;
 use App\Models\SalesItem;
 use App\Models\StockMovement;
 use App\Models\StockMovementItem;
+use App\Services\Tripay;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
@@ -23,6 +24,7 @@ class PosController extends Controller
         $store = $user->access->store;
         $canAdd = false;
         $canScan = false;
+        $q = $request->q;
 
         $plan = paket($storeID);
         $thePlan = config('plans')[$plan->plan];
@@ -96,10 +98,20 @@ class PosController extends Controller
             ['store_id', $storeID],
             ['pos_available', true],
         ])
-        ->whereHas('products.stock', $stockQuery)
+        ->whereHas('products', function ($query) use ($stockQuery, $q) {
+            $query->whereHas('stock', $stockQuery);
+
+            if ($q !== '') {
+                $query->where('name', 'like', '%' . $q . '%');
+            }
+        })
         ->with([
-            'products' => function ($query) use ($stockQuery) {
+            'products' => function ($query) use ($stockQuery, $q) {
                 $query->whereHas('stock', $stockQuery);
+
+                if ($q !== '') {
+                    $query->where('name', 'like', '%' . $q . '%');
+                }
             },
             'products.images',
             'products.stock' => $stockQuery,
@@ -114,6 +126,9 @@ class PosController extends Controller
                 'images',
                 'stock' => $stockQuery,
             ])
+            ->when($q !== '', function ($query) use ($q) {
+                $query->where('name', 'like', '%' . $q . '%');
+            })
             ->get();
 
         $categories->push(collect([
@@ -226,7 +241,7 @@ class PosController extends Controller
             'carts' => $carts,
         ]);
     }
-    public function place(Request $request) {
+    public function place(Request $request, Tripay $tripay) {
         $customer = $request->customer;
         $user = $request->user();
         $storeID = $user->access->store_id;
@@ -234,6 +249,11 @@ class PosController extends Controller
         $totalQuantity = 0;
         $totalPrice = 0;
         $totalCostPrice = 0;
+        $paymentMethod = $request->payment_method;
+        $paymentStatus = $paymentMethod == "CASH" ? "PAID" : "PENDING";
+        $paymentPayload = null;
+        $invoiceNumber = "INV-".$storeID."-".Carbon::now()->format('YmdHis');
+        $hasPayout = $paymentMethod == "CASH" ? true : false;
 
         if (gettype($customer) == "string") {
             $customer = Customer::create([
@@ -252,6 +272,7 @@ class PosController extends Controller
         ->with(['product', 'stock'])
         ->get();
 
+        $orderItems = [];
         foreach ($carts as $cart) {
             $product = $cart->product;
             $stock = $cart->stock;
@@ -264,6 +285,44 @@ class PosController extends Controller
             $totalMargin += $margin;
             $totalQuantity += $quantity;
             $totalCostPrice += $stock->cost_price;
+
+            array_push($orderItems, [
+                'sku' => $stock->label,
+                'name' => $product->name,
+                'price' => $product->price,
+                'quantity' => $quantity,
+            ]);
+        }
+
+        $totalPay = $totalPrice;
+        $fee = 0;
+
+        if ($paymentMethod != "CASH") {
+            $fee = (0.7 / 100 * $totalPay) + 1500;
+            $totalPay = $totalPrice + $fee;
+
+            array_push($orderItems, [
+                'sku' => $invoiceNumber,
+                'name' => "Fee",
+                'price' => $fee,
+                'quantity' => 1,
+            ]);
+
+            $signature = $tripay->signature([
+                'amount' => $totalPay,
+                'merchant_ref' => $invoiceNumber
+            ]);
+
+            $paymentPayload = $tripay->pay([
+                'method' => $paymentMethod,
+                'merchant_ref' => $invoiceNumber,
+                'amount' => $totalPay,
+                'customer_name' => $customer->name,
+                'customer_email' => $customer->email ?? "customer@takotoko.com",
+                'signature' => $signature,
+                'order_items' => $orderItems,
+                'callback_url' => env('BASE_URL') . "/api/callback/tripay"
+            ]);
         }
 
         $movement = StockMovement::create([
@@ -280,10 +339,16 @@ class PosController extends Controller
             'user_id' => $user->id,
             'customer_id' => $customer->id,
             'movement_id' => $movement->id,
-            'invoice_number' => "INV-".$storeID."-".Carbon::now()->format('YmdHis'),
+            'invoice_number' => $invoiceNumber,
             'total_quantity' => $totalQuantity,
             'total_price' => $totalPrice,
             'total_margin' => $totalMargin,
+            'total_pay' => $totalPay,
+            'fee' => $fee,
+            'payment_status' => $paymentStatus,
+            'payment_method' => $paymentMethod,
+            'payment_payload' => json_encode($paymentPayload),
+            'has_payout' => $hasPayout,
         ]);
 
         foreach ($carts as $cart) {

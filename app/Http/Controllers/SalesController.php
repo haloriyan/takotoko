@@ -18,4 +18,19 @@ class SalesController extends Controller
             'sales' => $sales,
         ]);
     }
+
+    public function callbackTripay(Request $request) {
+        $invoiceNumber = $request->merchant_ref;
+        $sl = Sales::where('invoice_number', $invoiceNumber);
+        $sales = $sl
+        ->first();
+
+        $sl->update([
+            'payment_status' => strtoupper($request->status),
+        ]);
+
+        return response()->json([
+            'success' => true,
+        ]);
+    }
 }

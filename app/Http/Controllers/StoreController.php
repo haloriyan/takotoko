@@ -6,6 +6,7 @@ use App\Exports\SalesReport;
 use App\Models\Category;
 use App\Models\Customer;
 use App\Models\Product;
+use App\Models\Review;
 use App\Models\Sales;
 use App\Models\StockMovement;
 use App\Models\StockMovementItem;
@@ -277,7 +278,7 @@ class StoreController extends Controller
 
             return response()->json(['ok']);
         }
-        $sales = $sl->with(['user', 'customer'])->paginate(15);
+        $sales = $sl->with(['user', 'customer'])->paginate(20);
 
         $volumeData = Sales::where($filter)
             ->whereBetween('created_at', [$startDate->format('Y-m-d H:i:s'), $endDate->format('Y-m-d H:i:s')])
@@ -423,6 +424,26 @@ class StoreController extends Controller
         return response()->json([
             'employees' => $employees,
             'can_add' => $canAdd
+        ]);
+    }
+    public function review(Request $request) {
+        $user = $request->user();
+        $storeID = $user->access->store_id;
+
+        $rev = Review::where('store_id', $storeID);
+        $all = $rev->get(['id', 'rate']);
+
+        $count = $all->count();
+        $avg = rtrim(rtrim(number_format($all->sum('rate') / $count, 1), '0'), '.');
+
+        $reviews = $rev->orderBy('created_at', 'DESC')
+        ->with(['customer', 'sales.items.product.images', 'sales.customer', 'sales.user'])
+        ->paginate(20);
+
+        return response()->json([
+            'reviews' => $reviews,
+            'count' => $count,
+            'avg' => $avg,
         ]);
     }
 }
