@@ -41,6 +41,7 @@ class AdminUserController extends Controller
             'name' => $request->name,
             'email' => $request->email,
             'password' => bcrypt($request->password),
+            'color' => randomSoftColor(),
         ]);
 
         return redirect()->route('admin.master.users.index')->with('success', 'User berhasil ditambahkan.');

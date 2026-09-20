@@ -18,7 +18,8 @@ class EmployeeController extends Controller
             $employee = User::create([
                 'name' => explode("@", $email)[0],
                 'email' => $email,
-                'password' => bcrypt('123456')
+                'password' => bcrypt('123456'),
+                'color' => randomSoftColor(),
             ]);
         }
 

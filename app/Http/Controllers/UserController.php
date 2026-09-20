@@ -102,6 +102,7 @@ class UserController extends Controller
                 'name' => $name,
                 'email' => $email,
                 'password' => bcrypt('123456'),
+                'color' => randomSoftColor(),
             ]);
             $user = $u->first();
         }

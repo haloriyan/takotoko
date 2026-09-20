@@ -15,6 +15,9 @@ use Illuminate\Support\Str;
 class PageController extends Controller
 {
     public function pay(Tripay $tripay) {
+        $color = randomSoftColor();
+        echo "<div style='color: #fff;background-color: {$color};padding: 5px 10px;'>{$color}</div>";
+        exit;
         return env('BASE_URL') . "/api/callback/tripay";
         // $signature = $tripay->signature([
         //     'amount' => 15000,

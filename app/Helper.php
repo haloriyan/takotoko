@@ -33,6 +33,27 @@ function Substring($text, $count) {
     return $toReturn;
 }
 
+function randomSoftColor(): string
+{
+    $h = random_int(0, 359);
+    $s = random_int(55, 75) / 100;
+    $l = random_int(35, 45) / 100;
+
+    $c = (1 - abs(2 * $l - 1)) * $s;
+    $x = $c * (1 - abs(fmod($h / 60, 2) - 1));
+    $m = $l - $c / 2;
+
+    $rgb = match (intdiv($h, 60)) {
+        0 => [$c, $x, 0], 1 => [$x, $c, 0],
+        2 => [0, $c, $x], 3 => [0, $x, $c],
+        4 => [$x, 0, $c], 5 => [$c, 0, $x],
+    };
+
+    return sprintf('#%02X%02X%02X', ...array_map(
+        fn($v) => ($v + $m) * 255, $rgb
+    ));
+}
+
 function RandomInt($length = 4) {
     $pattern = [0,1,2,3,4,5,6,7,8,9];
     $code = "";

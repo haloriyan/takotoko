@@ -31,20 +31,27 @@ class StoreController extends Controller
         $u = User::where('id', $session->id);
         $user = $u->first();
 
-        $icon = $request->file('icon');
-        $iconFileName = $icon->getClientOriginalName();
-
-        $store = Store::create([
+        $toCreate = [
             'name' => $request->name,
             'username' => Str::random(8),
-            'icon' => $iconFileName,
             'address' => $request->address,
-            'latitude' => $request->latitude,
-            'longitude' => $request->longitude,
+            'latitude' => json_decode($request->latitude),
+            'longitude' => json_decode($request->longitude),
             'max_radius_attendance' => 100,
             'package' => 'basic',
             'inventory_method' => 'FIFO',
-        ]);
+        ];
+
+        if ($request->hasFile('icon')) {
+            $icon = $request->file('icon');
+            $iconFileName = $icon->getClientOriginalName();
+            $toCreate['icon'] = $iconFileName;
+            $icon->move(
+                public_path('storage/store_icons'), $iconFileName
+            );
+        }
+
+        $store = Store::create($toCreate);
 
         $access = UserStore::create([
             'user_id' => $user->id,
@@ -58,10 +65,6 @@ class StoreController extends Controller
 
         $user = $u->with(['access.store', 'accesses'])->first();
 
-        $icon->move(
-            public_path('storage/store_icons'), $iconFileName
-        );
-
         return response()->json([
             'store' => $store,
         ]);
@@ -74,6 +77,9 @@ class StoreController extends Controller
 
         $toUpdate = [
             'name' => $request->name,
+            'address' => $request->address,
+            'latitude' => json_decode($request->latitude),
+            'longitude' => json_decode($request->longitude),
         ];
 
         if ($request->hasFile('icon')) {
@@ -107,7 +113,7 @@ class StoreController extends Controller
 
         $lastExpiredAt = StorePlan::where('store_id', $storeID)->max('expired_at');
         
-        if ($plan->plan != "basic" && $plan->plan != $request->plan) {
+        if ($plan == null || ($plan->plan != "basic" && $plan->plan != $request->plan)) {
             $lastExpiredAt = Carbon::now()->format('Y-m-d H:i:s');
         } else {
             $lastExpiredAt = $plan->expired_at;

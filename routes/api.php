@@ -9,6 +9,7 @@ use App\Http\Controllers\PageController;
 use App\Http\Controllers\PosController;
 use App\Http\Controllers\ProductController;
 use App\Http\Controllers\SalesController;
+use App\Http\Controllers\ScheduleController;
 use App\Http\Controllers\StockController;
 use App\Http\Controllers\StockistController;
 use App\Http\Controllers\StoreController;
@@ -126,6 +127,16 @@ Route::group(['prefix' => 'store'], function () {
             Route::get('sales/{id}/detail', [SalesController::class, 'detail']);
             Route::get('movement', [StoreController::class, 'movementReport']);
             Route::get('movement-detail/{productID}', [StoreController::class, 'movementReportDetail']);
+        });
+
+        Route::group(['prefix' => "schedule"], function () {
+            Route::group(['prefix' => "{date}"], function () {
+                Route::get('search', [ScheduleController::class, 'search']);
+                Route::post('store', [ScheduleController::class, 'store']);
+                Route::get('check', [ScheduleController::class, 'check']);
+                Route::post('present', [ScheduleController::class, 'present']);
+                Route::get('/', [ScheduleController::class, 'index']);
+            });
         });
     });
 });
