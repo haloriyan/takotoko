@@ -127,6 +127,13 @@ Route::group(['prefix' => 'store'], function () {
             Route::get('sales/{id}/detail', [SalesController::class, 'detail']);
             Route::get('movement', [StoreController::class, 'movementReport']);
             Route::get('movement-detail/{productID}', [StoreController::class, 'movementReportDetail']);
+
+            Route::get('presence', [StoreController::class, 'presenceReport']);
+        });
+
+        Route::group(['prefix' => "sales/{invoiceNumber}"], function () {
+            Route::post('accept', [SalesController::class, 'accept']);
+            Route::post('cancel', [SalesController::class, 'cancel']);
         });
 
         Route::group(['prefix' => "schedule"], function () {

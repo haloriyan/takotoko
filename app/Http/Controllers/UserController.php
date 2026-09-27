@@ -10,6 +10,7 @@ use App\Models\SalesItem;
 use App\Models\Store;
 use App\Models\StorePlan;
 use App\Models\User;
+use App\Models\UserDevice;
 use App\Notifications\Otp as NotificationsOtp;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
@@ -23,10 +24,34 @@ class UserController extends Controller
         $user = $request->user();
         $onboarding = false;
         $plans = config('plans');
+        $device = json_decode($request->header('device'));
+
+        // Log::info($device->device_name);
+        // Log::info(json_encode($device, JSON_PRETTY_PRINT));
 
         if ($user) {
-            $user = User::where('id', $user->id)->with(['accesses.store.active_plan', 'access.store.active_plan'])->first();
+            $user = User::where('id', $user->id)->with([
+                'accesses.store.active_plan', 'access.store.active_plan',
+                'devices' => function ($query) use ($device) {
+                    $query->where('device_id', $device->device_id);
+                }
+            ])->first();
+
             $needRefetch = false;
+
+            if ($user->devices->count() == 0) {
+                UserDevice::create([
+                    'user_id' => $user->id,
+                    'device_id' => $device->device_id,
+                    'platform' => $device->platform,
+                    'push_token' => $device->push_token,
+                    'device_name' => $device->device_name,
+                    'device_model' => $device->device_model,
+                    'os_version' => $device->os_version,
+                ]);
+
+                $needRefetch = true;
+            }
 
             if ($user->accesses->count() == 0) {
                 $onboarding = true;
@@ -64,10 +89,18 @@ class UserController extends Controller
             }
         }
 
+        $plan = @$plans[
+            $user->access->store->package
+        ] ?? null;
+
+        if ($user) {
+            $user->access->store->plan = $plan;
+        }
+
         return response()->json([
             'user' => $user,
             'onboarding' => $onboarding,
-            'plans' => $plans,
+            'plan' => $plan,
         ]);
     }
 
@@ -255,12 +288,26 @@ class UserController extends Controller
                 ];
             });
 
+        $pendingBalance = 0;
+        $salesPendingPayout = Sales::where([
+            ['store_id', $storeID],
+            ['payment_status', 'PAID'],
+            ['has_payout', false],
+            ['payment_method', '!=', 'CASH']
+        ])
+        ->get();
+
+        foreach ($salesPendingPayout as $sale) {
+            $pendingBalance += $sale->total_price;
+        }
+
         return response()->json([
             'user' => $user,
             'revenue' => (int) $revenue,
             'highest_volume' => $highestVolume,
             'hours' => $hours,
             'contents' => $contents,
+            'pending_balance' => $pendingBalance,
         ]);
     }
     public function homeSales(Request $request) {

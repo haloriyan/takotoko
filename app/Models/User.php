@@ -39,6 +39,9 @@ class User extends Authenticatable
     {
         return $this->hasMany(UserStore::class, 'user_id');
     }
+    public function devices() {
+        return $this->hasMany(UserDevice::class, 'user_id');
+    }
 
     public function access()
     {

@@ -14,6 +14,9 @@ class ScheduleController extends Controller
     public function index(Request $request, $date) {
         $user = $request->user();
         $storeID = $user->access->store_id;
+        $store = $user->access->store;
+        $plan = config('plans')[$store->package];
+        $canAbsen = $plan['absensi'];
 
         $schedules = Schedule::where([
             ['store_id', $storeID],
@@ -45,6 +48,7 @@ class ScheduleController extends Controller
 
         return response()->json([
             'schedules' => $schedules,
+            'can_absen' => $canAbsen,
         ]);
     }
     public function search(Request $request, $date) {
@@ -101,6 +105,7 @@ class ScheduleController extends Controller
     public function check(Request $request, $date, $directFuncCall = false) {
         $user = $request->user();
         $storeID = $user->access->store_id;
+        $store = $user->access->store;
 
         $query = ScheduleUser::where([
             ['user_id', $user->id],
@@ -113,6 +118,9 @@ class ScheduleController extends Controller
         $response = [
             'has_checked_in' => @$schedule->check_in_at != null ?? false,
             'has_checked_out' => @$schedule->check_out_at != null ?? false,
+            'user' => $user,
+            'store' => $store,
+            'store_id' => $storeID,
         ];
 
         if ($directFuncCall) {
@@ -122,13 +130,46 @@ class ScheduleController extends Controller
 
         return response()->json($response);
     }
+    function distance($coords)
+    {
+        $earthRadius = 6371000; // meters
+
+        $lat1 = $coords['from'][0];
+        $lon1 = $coords['from'][1];
+        $lat2 = $coords['to'][0];
+        $lon2 = $coords['to'][1];
+
+        $dLat = deg2rad($lat2 - $lat1);
+        $dLon = deg2rad($lon2 - $lon1);
+
+        $a = sin($dLat / 2) ** 2
+            + cos(deg2rad($lat1))
+            * cos(deg2rad($lat2))
+            * sin($dLon / 2) ** 2;
+
+        $c = 2 * atan2(sqrt($a), sqrt(1 - $a));
+
+        return $earthRadius * $c;
+    }
     public function present(Request $request, $date) {
         $cek = $this->check($request, $date, true);
+        $store = $cek['store'];
         $image = $request->file('image');
         $imageFileName = $image->getClientOriginalName();
         $latitude = $request->latitude;
         $longitude = $request->longitude;
         $address = $request->address;
+        $dist = $this->distance([
+            'from' => [$store->latitude, $longitude],
+            'to' => [$latitude, $longitude]
+        ]);
+
+        if ($dist >= $store->max_radius_distance) {
+            return response()->json([
+                'message' => 'Presensi gagal. Lokasi terlalu jauh.',
+                'distance' => $dist,
+            ], 422);
+        }
 
         $data = $cek['query']->with([
             'schedule'

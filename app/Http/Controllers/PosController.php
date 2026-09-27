@@ -250,7 +250,7 @@ class PosController extends Controller
         $totalPrice = 0;
         $totalCostPrice = 0;
         $paymentMethod = $request->payment_method;
-        $paymentStatus = $paymentMethod == "CASH" ? "PAID" : "PENDING";
+        $paymentStatus = $paymentMethod == "CASH" ? $request->payment_status : "PENDING";
         $paymentPayload = null;
         $invoiceNumber = "INV-".$storeID."-".Carbon::now()->format('YmdHis');
         $hasPayout = $paymentMethod == "CASH" ? true : false;

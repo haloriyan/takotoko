@@ -8,6 +8,8 @@ use App\Models\Customer;
 use App\Models\Product;
 use App\Models\Review;
 use App\Models\Sales;
+use App\Models\Schedule;
+use App\Models\ScheduleUser;
 use App\Models\StockMovement;
 use App\Models\StockMovementItem;
 use App\Models\Store;
@@ -16,6 +18,7 @@ use App\Models\Supplier;
 use App\Models\User;
 use App\Models\UserStore;
 use Carbon\Carbon;
+use Carbon\CarbonPeriod;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Storage;
@@ -246,7 +249,17 @@ class StoreController extends Controller
         $storeID = $user->access->store_id;
         $filter = [['store_id', $storeID]];
 
-        $query = Sales::where('store_id', $storeID)
+        $paymentMethod = $request->payment_method ?? null;
+        $paymentStatus = $request->payment_status ?? null;
+
+        if ($paymentMethod != "null") {
+            array_push($filter, ['payment_method', $paymentMethod]);
+        }
+        if ($paymentStatus != "null") {
+            array_push($filter, ['payment_status', $paymentStatus]);
+        }
+
+        $query = Sales::where($filter)
             ->whereBetween('created_at', [
                 $startDate->format('Y-m-d H:i:s'),
                 $endDate->format('Y-m-d H:i:s')
@@ -450,6 +463,67 @@ class StoreController extends Controller
             'reviews' => $reviews,
             'count' => $count,
             'avg' => $avg,
+        ]);
+    }
+    public function presenceReport(Request $request) {
+        $user = $request->user();
+        $storeID = $user->access->store_id;
+        $startDate = Carbon::parse($request->start_date)->startOfDay();
+        $endDate = Carbon::parse($request->end_date)->endOfDay();
+
+        $employees = User::whereHas('access', function ($query) use ($storeID) {
+            $query->where('store_id', $storeID);
+        })
+        ->get();
+
+        $periods = CarbonPeriod::create($startDate, $endDate)->toArray();
+        $tableColumns = [];
+        $tableData = [];
+
+        foreach ($periods as $d => $dt) {
+            array_push($tableColumns, [
+                'label' => $dt->isoFormat('DD'),
+                'key' => $dt->isoFormat('DD'),
+                'width' => 40,
+            ]);
+        }
+
+        foreach ($employees as $e => $employee) {
+            $dates = [];
+            $theTableData = ['name' => $employee->name];
+
+            foreach ($periods as $d => $dt) {
+                $date = $dt->format('Y-m-d');
+                $schedule = ScheduleUser::where([
+                    ['user_id', $employee->id],
+                    ['date', $date]
+                ])
+                ->orderBy('created_at', 'DESC')
+                ->first();
+                $status = null;
+                if ($schedule != null) {
+                    if ($schedule->check_in_at == null) {
+                        $status = Carbon::parse($schedule->check_in_at)->isPast() ? false : null;
+                    } else {
+                        $status = true;
+                    }
+                }
+                
+                $theTableData[$dt->isoFormat('DD')] = [
+                    'status' => $status,
+                    'schedule' => $schedule,
+                ];
+            }
+
+            array_push($tableData, $theTableData);
+
+            $employees[$e]->schedules = $dates;
+        }
+
+        return response()->json([
+            'dates' => [],
+            'table_columns' => $tableColumns,
+            'table_data' => $tableData,
         ]);
     }
 }
