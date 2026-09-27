@@ -44,4 +44,7 @@ class Product extends Model
     public function movement_items() {
         return $this->hasMany(StockMovementItem::class, 'product_id');
     }
+    public function compositions() {
+        return $this->hasMany(ProductComposition::class, 'product_id');
+    }
 }

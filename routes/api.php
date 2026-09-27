@@ -104,6 +104,14 @@ Route::group(['prefix' => 'store'], function () {
                     Route::post('store', [ProductController::class, 'stockStore']);
                     Route::get('/', [ProductController::class, 'stock']);
                 });
+
+                Route::group(['prefix' => "composition"], function () {
+                    Route::post('increase', [ProductController::class, 'compositionIncrease']);
+                    Route::post('decrease', [ProductController::class, 'compositionDecrease']);
+                    Route::post('search', [ProductController::class, 'compositionSearch']);
+                    // Route::post('quantity/{action}', [ProductController::class, 'compositionQuantity']);
+                    Route::get('/', [ProductController::class, 'productComposition']);
+                });
             });
             
             Route::get('/', [StoreController::class, 'product']);

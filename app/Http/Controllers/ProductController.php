@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\Product;
 use App\Models\ProductCategory;
+use App\Models\ProductComposition;
 use App\Models\ProductImage;
 use App\Models\ProductImageLabel;
 use App\Models\ProductStock;
@@ -310,6 +311,82 @@ class ProductController extends Controller
 
         return response()->json([
             'message' => "Berhasil menambahkan stok untuk produk " . $product->name,
+        ]);
+    }
+
+    public function productComposition(Request $request, $productID) {
+        $compositions = ProductComposition::where('product_id', $productID)
+        ->with(['composition.images'])
+        ->get();
+
+        return response()->json([
+            'compositions' => $compositions,
+        ]);
+    }
+    public function compositionSearch(Request $request, $productID) {
+        $user = $request->user();
+        $storeID = $user->access->store_id;
+
+        $product = Product::where('id', $productID)
+        ->with(['compositions'])
+        ->first();
+        $compositionIDs = $product->compositions->pluck('composition_id');
+
+        $products = Product::where([
+            ['store_id', $storeID],
+            ['name', 'LIKE', '%'.$request->q.'%']
+        ])
+        ->whereNotIn('id', $compositionIDs)
+        ->with(['images'])
+        ->take(10)
+        ->get();
+        
+        return response()->json([
+            'products' => $products,
+        ]);
+    }
+    public function compositionIncrease(Request $request, $productID) {
+        $compositionID = $request->composition_id;
+        $filter = [
+            ['product_id', $productID],
+            ['composition_id', $compositionID]
+        ];
+
+        $check = ProductComposition::where($filter)->first();
+
+        if ($check == null) {
+            ProductComposition::create([
+                'product_id' => $productID,
+                'composition_id' => $request->composition_id,
+                'quantity' => 1,
+            ]);
+        } else {
+            ProductComposition::where($filter)->increment('quantity');
+        }
+
+        return response()->json([
+            'ok'
+        ]);
+    }
+    public function compositionDecrease(Request $request, $productID) {
+        $compositionID = $request->composition_id;
+        $filter = [
+            ['product_id', $productID],
+            ['composition_id', $compositionID]
+        ];
+
+        $check = ProductComposition::where($filter)->first();
+
+        if ($check != null) {
+            if ($check->quantity == 1) {
+                ProductComposition::where($filter)->delete();
+            } else {
+                ProductComposition::where($filter)->decrement('quantity');
+            }
+        }
+
+        return response()->json([
+            'ok'
         ]);
     }
 }
