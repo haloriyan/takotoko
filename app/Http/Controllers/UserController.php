@@ -26,9 +26,6 @@ class UserController extends Controller
         $plans = config('plans');
         $device = json_decode($request->header('device'));
 
-        // Log::info($device->device_name);
-        // Log::info(json_encode($device, JSON_PRETTY_PRINT));
-
         if ($user) {
             $user = User::where('id', $user->id)->with([
                 'accesses.store.active_plan', 'access.store.active_plan',
@@ -230,7 +227,10 @@ class UserController extends Controller
         ->with(['categories', 'slides'])
         ->take(15)->get();
 
-        $revenue = SalesItem::where('store_id', $storeID)
+        $revenue = SalesItem::where([
+            ['store_id', $storeID],
+            ['is_composition', 0]
+        ])
             ->whereBetween('created_at', [
                 Carbon::now()->startOfDay()->format('Y-m-d H:i:s'),
                 Carbon::now()->endOfDay()->format('Y-m-d H:i:s'),
@@ -238,15 +238,18 @@ class UserController extends Controller
             ->sum('total_price');
 
         $highestVolume = SalesItem::where('store_id', $storeID)
+        ->where('is_composition', false)
             ->whereBetween('created_at', [
                 Carbon::now()->startOfDay()->format('Y-m-d H:i:s'),
                 Carbon::now()->endOfDay()->format('Y-m-d H:i:s'),
             ])
-            ->select('product_id', DB::raw('SUM(quantity) as total_quantity'))
+            ->select('product_id', 'is_composition', DB::raw('SUM(quantity) as total_quantity'))
             ->with('product.images')
             ->groupBy('product_id')
             ->orderByDesc('total_quantity')
             ->get();
+
+            Log::info(json_encode($highestVolume, JSON_PRETTY_PRINT));
 
         // This is ChatGPT generated code, for getting peak hours of a specific date, 
         // please DO NOT edit partially

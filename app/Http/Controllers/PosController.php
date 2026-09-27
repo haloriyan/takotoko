@@ -57,6 +57,8 @@ class PosController extends Controller
         ->with([
             'product.images',
             'stock',
+            'children.composition',
+            'children.stock'
         ])
         ->get();
 
@@ -105,6 +107,9 @@ class PosController extends Controller
                 $query->where('name', 'like', '%' . $q . '%');
             }
         })
+        ->whereHas('products.compositions.composition', function ($query) use ($stockQuery) {
+            $query->whereHas('stock', $stockQuery);
+        })
         ->with([
             'products' => function ($query) use ($stockQuery, $q) {
                 $query->whereHas('stock', $stockQuery);
@@ -112,6 +117,9 @@ class PosController extends Controller
                 if ($q !== '') {
                     $query->where('name', 'like', '%' . $q . '%');
                 }
+            },
+            'products.compositions.composition' => function ($query) use ($stockQuery) {
+                $query->whereHas('stock', $stockQuery)->with(['stock']);
             },
             'products.images',
             'products.stock' => $stockQuery,
@@ -140,6 +148,24 @@ class PosController extends Controller
             'pos_available' => true,
             'products' => $uncategorizedProducts,
         ]));
+
+        $categories = $categories->toArray();
+
+        // Log::info(json_encode($categories, JSON_PRETTY_PRINT));
+
+        // I added this because I have no idea what the fuck is going on above
+        foreach ($categories as $c => $category) {
+            foreach ($category['products'] as $p => $product) {
+                foreach ($product['compositions'] as $co => $comp) {
+                    // Log::info()
+                    if ($comp['composition'] == null || @$comp['composition']['stock']['quantity'] < @$comp['quantity']) {
+                        array_splice(
+                            $categories[$c]['products'], $p, 1
+                        );
+                    }
+                }
+            }
+        }
 
         return response()->json([
             'categories' => $categories,
@@ -269,36 +295,42 @@ class PosController extends Controller
             ['store_id', $storeID],
             ['user_id', $user->id]
         ])
-        ->with(['product', 'stock'])
+        ->with([
+            'product', 'stock', 
+            'children.stock',
+            'children.composition'
+        ])
         ->get();
 
         $orderItems = [];
         foreach ($carts as $cart) {
-            $product = $cart->product;
-            $stock = $cart->stock;
-            $quantity = $cart->quantity;
+            if (!$cart->is_composition) {
+                $product = $cart->product;
+                $stock = $cart->stock;
+                $quantity = $cart->quantity;
 
-            $margin = ($product->price - $stock->cost_price) * $quantity;
-            $sumPrice = $quantity * $product->price;
+                $margin = ($product->price - $stock->cost_price) * $quantity;
+                $sumPrice = $quantity * $product->price;
 
-            $totalPrice += $sumPrice;
-            $totalMargin += $margin;
-            $totalQuantity += $quantity;
-            $totalCostPrice += $stock->cost_price;
+                $totalPrice += $sumPrice;
+                $totalMargin += $margin;
+                $totalQuantity += $quantity;
+                $totalCostPrice += $stock->cost_price;
 
-            array_push($orderItems, [
-                'sku' => $stock->label,
-                'name' => $product->name,
-                'price' => $product->price,
-                'quantity' => $quantity,
-            ]);
+                array_push($orderItems, [
+                    'sku' => $stock->label,
+                    'name' => $product->name,
+                    'price' => $product->price,
+                    'quantity' => $quantity,
+                ]);
+            }
         }
 
         $totalPay = $totalPrice;
         $fee = 0;
 
         if ($paymentMethod != "CASH") {
-            $fee = (0.7 / 100 * $totalPay) + 1500;
+            $fee = ceil(0.7 / 100 * $totalPay) + 1500;
             $totalPay = $totalPrice + $fee;
 
             array_push($orderItems, [
@@ -366,6 +398,18 @@ class PosController extends Controller
                 'total_price' => $cart->quantity * $cart->stock->cost_price,
             ]);
 
+            foreach ($cart->children as $child) {
+                $childMovementItem = StockMovementItem::create([
+                    'store_id' => $storeID,
+                    'movement_id' => $movement->id,
+                    'product_id' => $child->product_id,
+                    'stock_id' => $child->stock_id,
+                    'price' => $child->stock->cost_price,
+                    'quantity' => $child->quantity,
+                    'total_price' => $child->quantity * $child->stock->cost_price,
+                ]);
+            }
+
             $salesItem = SalesItem::create([
                 'store_id' => $storeID,
                 'sales_id' => $sales->id,
@@ -377,7 +421,10 @@ class PosController extends Controller
                 'total_price' => $quantity * $product->price,
                 'margin' => ($product->price - $stock->cost_price) * $quantity,
                 'notes' => $cart->notes,
+                'is_composition' => $cart->is_composition,
             ]);
+
+            Log::info($cart->is_composition);
 
             Cart::where('id', $cart->id)->delete();
         }

@@ -8,7 +8,7 @@ class SalesItem extends Model
 {
     protected $fillable = [
         'store_id', 'sales_id', 'product_id', 'stock_id', 'movement_item_id',
-        'price', 'quantity', 'total_price', 'margin', 'notes'
+        'price', 'quantity', 'total_price', 'margin', 'notes', 'is_composition'
     ];
 
     public function sales() {

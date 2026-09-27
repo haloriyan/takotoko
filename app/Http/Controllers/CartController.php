@@ -56,7 +56,26 @@ class CartController extends Controller
                 'price' => $product->price,
                 'quantity' => 1,
                 'total_price' => $product->price,
+                'is_composition' => false,
             ]);
+
+            foreach ($product->compositions as $c => $comp) {
+                Cart::create([
+                    'product_id' => $comp->composition->id,
+                    'stock_id' => $comp->composition->stock->id,
+                    'store_id' => $storeID,
+                    'user_id' => $user->id,
+                    'price' => $comp->composition->price,
+                    'quantity' => $comp->quantity,
+                    'total_price' => $comp->quantity * $comp->composition->price,
+                    'is_composition' => true,
+                    'cart_parent_id' => $cart->id,
+                    'composition_id' => $comp->id,
+                ]);
+
+                ProductStock::where('id', $comp->composition->stock->id)
+                ->decrement('quantity', $comp->quantity);
+            }
         } else {
             $newQuantity = $cart->quantity + 1;
             $newPrice = $product->price * $newQuantity;
@@ -69,18 +88,32 @@ class CartController extends Controller
 
         $sto->decrement('quantity');
 
+        // foreach ($product->compositions as $c => $comp) {
+        //     ProductStock::where('id', $comp->composition->stock->id)->decrement('quantity');
+        // }
+
         return response()->json(['ok']);
     }
 
     public function remove(Request $request) {
         $user = $request->user();
         $crt = Cart::where('id', $request->cart_id);
-        $cart = $crt->first();
+        $cart = $crt->with(['children.composition'])->first(); // "children" means for product composition
 
-        if ($cart->quantity == 1) {
+        if ($cart && $cart->quantity == 1) {
             $crt->delete();
         } else {
             $crt->decrement('quantity');
+        }
+
+        foreach ($cart->children as $c => $child) {
+            $chi = Cart::where('id', $child->id);
+            $childCart = $chi->with(['composition'])->first();
+
+            if ($childCart) {
+                $chi->increment('quantity', @$childCart->composition->quantity);
+            }
+            ProductStock::where('id', $child->stock_id)->increment('quantity', @$child->composition->quantity);
         }
 
         $sto = ProductStock::where('id', $cart->stock_id);
@@ -96,7 +129,9 @@ class CartController extends Controller
         $cart = Cart::where([
             ['user_id', $user->id],
             ['product_id', $productID]
-        ])->first();
+        ])
+        ->with(['children.composition'])
+        ->first();
 
         if ($cart) {
             $stockID = $cart->stock_id;
@@ -105,6 +140,11 @@ class CartController extends Controller
             $cart->delete();
 
             ProductStock::where('id', $stockID)->increment('quantity', $quantity);
+
+            foreach ($cart->children as $child) {
+                ProductStock::where('id', $child->stock_id)
+                ->increment('quantity', $child->composition->quantity);
+            }
         }
 
         return response()->json(['ok']);
