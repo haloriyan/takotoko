@@ -107,9 +107,9 @@ class PosController extends Controller
                 $query->where('name', 'like', '%' . $q . '%');
             }
         })
-        ->whereHas('products.compositions.composition', function ($query) use ($stockQuery) {
-            $query->whereHas('stock', $stockQuery);
-        })
+        // ->whereHas('products.compositions.composition', function ($query) use ($stockQuery) {
+        //     $query->whereHas('stock', $stockQuery);
+        // })
         ->with([
             'products' => function ($query) use ($stockQuery, $q) {
                 $query->whereHas('stock', $stockQuery);
@@ -151,17 +151,19 @@ class PosController extends Controller
 
         $categories = $categories->toArray();
 
-        // Log::info(json_encode($categories, JSON_PRETTY_PRINT));
+        Log::info(json_encode($categories, JSON_PRETTY_PRINT));
 
         // I added this because I have no idea what the fuck is going on above
         foreach ($categories as $c => $category) {
             foreach ($category['products'] as $p => $product) {
-                foreach ($product['compositions'] as $co => $comp) {
-                    // Log::info()
-                    if ($comp['composition'] == null || @$comp['composition']['stock']['quantity'] < @$comp['quantity']) {
-                        array_splice(
-                            $categories[$c]['products'], $p, 1
-                        );
+                if (isset($product['compositions'])) {
+                    foreach ($product['compositions'] as $co => $comp) {
+                        // Log::info()
+                        if ($comp['composition'] == null || @$comp['composition']['stock']['quantity'] < @$comp['quantity']) {
+                            array_splice(
+                                $categories[$c]['products'], $p, 1
+                            );
+                        }
                     }
                 }
             }
