@@ -112,6 +112,33 @@ function initial($name) {
 
     return strtoupper($toReturn);
 }
+function copyDirectory($source, $destination) {
+    // Open the source directory
+    $dir = opendir($source);
+    
+    // Create the destination directory if it doesn't exist
+    if (!is_dir($destination)) {
+        mkdir($destination, 0755, true);
+    }
+    
+    // Loop through all files and folders inside the source
+    while (($file = readdir($dir)) !== false) {
+        if ($file !== '.' && $file !== '..') {
+            $srcPath = $source . '/' . $file;
+            $destPath = $destination . '/' . $file;
+            
+            if (is_dir($srcPath)) {
+                // Recursively copy subdirectories
+                copyDirectory($srcPath, $destPath);
+            } else {
+                // Copy individual files
+                copy($srcPath, $destPath);
+            }
+        }
+    }
+    
+    closedir($dir);
+}
 
 function currency_encode($amount, $currencyPrefix = 'Rp', $thousandSeparator = '.', $decimalSeparator = ',', $zeroLabel = null) {
 	$zeroDecimalCurrencies = [

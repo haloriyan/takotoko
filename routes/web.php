@@ -4,6 +4,7 @@ use App\Http\Controllers\PageController;
 use App\Http\Controllers\ReviewController;
 use Illuminate\Support\Facades\Route;
 
+Route::get('util', [PageController::class, 'util']);
 Route::get('/', [PageController::class, 'index'])->name('index');
 Route::group(['prefix' => "solusi"], function () {
     /*

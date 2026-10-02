@@ -90,7 +90,7 @@ class ProductController extends Controller
                 ]);
 
                 $img->move(
-                    public_path('storage/product_images/'.$product->id),
+                    public_path('storage/'.$product->store_id.'/product_images/'.$product->id),
                     $fileName
                 );
 
@@ -162,7 +162,7 @@ class ProductController extends Controller
                 ]);
 
                 $img->move(
-                    public_path('storage/product_images/'.$id),
+                    public_path('storage/'.$storeID.'/product_images/'.$id),
                     $fileName
                 );
 
@@ -197,7 +197,7 @@ class ProductController extends Controller
 
         $prod->delete();
         foreach ($product->images as $image) {
-            Storage::delete('public/product_images/'.$id.'/'.$image->filename);
+            Storage::delete('public/'.$product->store_id.'/product_images/'.$id.'/'.$image->filename);
         }
 
         return response()->json([

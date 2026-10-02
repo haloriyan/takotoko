@@ -27,4 +27,8 @@ class Store extends Model
         )->where('payment_status', 'PAID')
         ->orderBy('created_at', 'DESC');
     }
+
+    public function accesses() {
+        return $this->hasMany(UserStore::class, 'store_id');
+    }
 }

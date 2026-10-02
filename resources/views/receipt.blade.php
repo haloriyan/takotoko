@@ -83,7 +83,7 @@
                     <tr>
                         <td class="flex items-center gap-4 py-4">
                             <img 
-                                src="/storage/product_images/{{ $item->product->id }}/{{ $item->product->images[0]->filename }}" 
+                                src="/storage/{{ $item->product->store_id }}/product_images/{{ $item->product->id }}/{{ $item->product->images[0]->filename }}" 
                                 alt="{{ $item->product->name }}"
                                 class="w-12 h-12 rounded-lg object-cover"
                             >

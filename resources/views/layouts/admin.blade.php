@@ -89,10 +89,15 @@
             <ion-icon name="chevron-down-outline" class="me-4"></ion-icon>
         </a>
         <div class="{{ (@$routes[1] == 'master') ? 'flex' : 'hidden' }} group-hover:flex flex-col mt-2 mb-2">
-            <a href="{{ route('admin.master.users.index') }}" class="flex items-center gap-4 text-slate-500">
+            <a href="{{ route('admin.master.user') }}" class="flex items-center gap-4 text-slate-500">
                 <div class="h-10 w-1 bg-white"></div>
-                <ion-icon name="ellipse-outline" class="text-[8px] {{ (@$routes[2] == 'users') ? 'text-primary' : '' }}"></ion-icon>
-                <div class="text-sm flex grow {{ (@$routes[2] == 'users') ? 'text-primary' : '' }}">Users</div>
+                <ion-icon name="ellipse-outline" class="text-[8px] {{ (@$routes[2] == 'user') ? 'text-primary' : '' }}"></ion-icon>
+                <div class="text-sm flex grow {{ (@$routes[2] == 'user') ? 'text-primary' : '' }}">Users</div>
+            </a>
+            <a href="{{ route('admin.master.stores') }}" class="flex items-center gap-4 text-slate-500">
+                <div class="h-10 w-1 bg-white"></div>
+                <ion-icon name="ellipse-outline" class="text-[8px] {{ (@$routes[2] == 'stores') ? 'text-primary' : '' }}"></ion-icon>
+                <div class="text-sm flex grow {{ (@$routes[2] == 'stores') ? 'text-primary' : '' }}">Stores</div>
             </a>
         </div>
     </div>
@@ -123,6 +128,21 @@
 
 @yield('ModalArea')
 
+@if (@$message != "" || $errors->count() > 0)
+    <div id="ToastArea" class="fixed top-12 left-0 right-0 flex items-center justify-center z-30 transition-all duration-300 mt-[-400px]">
+        <div class="bg-green-500 text-white text-sm font-medium rounded-lg p-3 px-5 flex items-center gap-2">
+            {{ @$message }}
+            <ion-icon name="close-outline" class="text-lg cursor-pointer" onclick="CloseToast()"></ion-icon>
+        </div>
+        @foreach ($errors->all() as $err)
+            <div class="bg-green-500 text-white text-sm font-medium rounded-lg p-3 px-5 flex items-center gap-2">
+                {{ $err }}
+                <ion-icon name="close-outline" class="text-lg cursor-pointer" onclick="CloseToast()"></ion-icon>
+            </div>
+        @endforeach
+    </div>
+@endif
+
 <script type="module" src="https://unpkg.com/ionicons@7.1.0/dist/ionicons/ionicons.esm.js"></script>
 <script nomodule src="https://unpkg.com/ionicons@7.1.0/dist/ionicons/ionicons.js"></script>
 <script>
@@ -133,6 +153,18 @@
     const sidebar = select("#sidebar");
     const content = select("#content");
     // const ProfileMenu = select("#ProfileMenu");
+    const ToastArea = select("#ToastArea");
+    const TOAST_DURATION = 5000;
+
+    const CloseToast = () => {
+        ToastArea.classList.add('mt-[-400px]');
+    }
+    if (ToastArea !== null) {
+        ToastArea.classList.remove('mt-[-400px]');
+        setTimeout(() => {
+            CloseToast();
+        }, TOAST_DURATION);
+    }
 
     const Initial = (name) => {
         if (!name || typeof name === 'undefined') {

@@ -4,12 +4,14 @@ namespace App\Http\Controllers;
 
 use App\Models\CmsCategory;
 use App\Models\CmsContent;
+use App\Models\Product;
 use App\Models\Sales;
 use App\Models\User;
 use App\Services\Tripay;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Session;
+use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 
 class PageController extends Controller
@@ -224,5 +226,31 @@ class PageController extends Controller
             'sales' => $sales,
             'message' => $message,
         ]);
+    }
+    public function util() {
+        $products = Product::all();
+        foreach ($products as $product) {
+            $storePath = (string) public_path("storage/" . $product->store_id);
+            $imagePath = public_path("storage/product_images/" . $product->id);
+            $newImagePath = public_path("storage/" . $product->store_id . "/product_images/" . $product->id);
+            $ada = file_exists($storePath);
+
+            Log::info($ada);
+            Log::info($storePath);
+
+            if (!$ada) {
+                Log::info("[CREATING] " . $storePath);
+                // Storage::makeDirectory($storePath);
+                mkdir($storePath);
+                Log::info("[CREATED] " . $storePath);
+            }
+
+            if (is_dir($imagePath)) {
+                copyDirectory($imagePath, $newImagePath);
+            }
+
+            Log::info("[OLD] " . $imagePath);
+            Log::info("[NEW] " . $newImagePath);
+        }
     }
 }
