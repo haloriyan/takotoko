@@ -8,7 +8,7 @@ class StockMovementItem extends Model
 {
     protected $fillable = [
         'store_id', 'movement_id', 'product_id', 'stock_id',
-        'price', 'quantity', 'total_price'
+        'price', 'quantity', 'quantity_diff', 'total_price'
     ];
 
     public function stock() {

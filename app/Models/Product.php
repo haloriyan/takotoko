@@ -47,4 +47,7 @@ class Product extends Model
     public function compositions() {
         return $this->hasMany(ProductComposition::class, 'product_id');
     }
+    public function sales_items() {
+        return $this->hasMany(SalesItem::class, 'product_id');
+    }
 }

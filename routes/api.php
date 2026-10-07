@@ -134,6 +134,7 @@ Route::group(['prefix' => 'store'], function () {
             Route::get('sales', [StoreController::class, 'salesReport']);
             Route::get('sales/{id}/detail', [SalesController::class, 'detail']);
             Route::get('movement', [StoreController::class, 'movementReport']);
+            Route::get('movement/export', [StoreController::class, 'movementReportExport']);
             Route::get('movement-detail/{productID}', [StoreController::class, 'movementReportDetail']);
 
             Route::get('presence', [StoreController::class, 'presenceReport']);
@@ -156,6 +157,10 @@ Route::group(['prefix' => 'store'], function () {
     });
 });
 
+Route::group(['prefix' => "export"], function () {
+    Route::get('movement', [StoreController::class, 'movementReportExport']);
+});
+
 Route::group(['prefix' => "pos", 'middleware' => "auth:sanctum"], function () {
     Route::group(['prefix' => "cart"], function () {
         Route::post('store', [CartController::class, 'store']);
@@ -172,6 +177,7 @@ Route::group(['prefix' => "stockist", 'middleware' => "auth:sanctum"], function 
     Route::get('home', [StockistController::class, 'home']);
     Route::post('search', [StockistController::class, 'searchProduct']);
     Route::post('store', [StockistController::class, 'store']);
+    Route::post('opname', [StockistController::class, 'opname']);
 });
 
 Route::group(['prefix' => "callback"], function () {

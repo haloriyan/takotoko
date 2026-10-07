@@ -8,7 +8,7 @@ class Sales extends Model
 {
     protected $fillable = [
         'store_id', 'user_id', 'customer_id', 'movement_id',
-        'invoice_number', 'total_quantity', 'total_price', 'total_margin', 'notes',
+        'invoice_number', 'total_quantity', 'total_price', 'total_margin', 'total_point', 'notes',
         'fee', 'total_pay', 'payment_method', 'payment_status', 'payment_payload', 'has_payout'
     ];
 

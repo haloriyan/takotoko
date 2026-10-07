@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Exports\MovementReport;
 use App\Exports\SalesReport;
 use App\Models\Category;
 use App\Models\Customer;
@@ -351,13 +352,93 @@ class StoreController extends Controller
             'volume' => $volume,
         ]);
     }
+    public function movementReportExport(Request $request) {
+        $startDate = Carbon::parse($request->start_date)->format('Y-m-d');
+        $endDate = Carbon::parse($request->end_date)->format('Y-m-d');
+        $user = User::where('email', 'takotekno.com@gmail.com')->first();
+        $storeID = $user->access->store_id;
+        $store = Store::where('id', $storeID)->first();
+
+        $period = CarbonPeriod::create($startDate, $endDate);
+        $dates = [];
+        foreach ($period as $d => $dt) {
+            $movements = StockMovementItem::query()
+                ->where('stock_movement_items.store_id', $storeID)
+                ->join(
+                    'stock_movements',
+                    'stock_movements.id',
+                    '=',
+                    'stock_movement_items.movement_id'
+                )
+                ->whereBetween('stock_movements.created_at', [$dt->startOfDay()->format('Y-m-d H:i:s'), $dt->endOfDay()->format('Y-m-d H:i:s')])
+                ->selectRaw("
+                    stock_movement_items.product_id,
+                    DATE(stock_movements.created_at) as date,
+                    SUM(CASE
+                        WHEN stock_movements.type = 'IN'
+                        THEN stock_movement_items.quantity
+                        ELSE 0
+                    END) as in_qty,
+                    SUM(CASE
+                        WHEN stock_movements.type = 'OUT'
+                        THEN stock_movement_items.quantity
+                        ELSE 0
+                    END) as out_qty,
+                    SUM(CASE
+                        WHEN stock_movements.type = 'OPNAME'
+                        THEN stock_movement_items.quantity_diff
+                        ELSE 0
+                    END) as opn_qty
+                ")
+                ->groupBy(
+                    'stock_movement_items.product_id',
+                    'date'
+                )
+                ->orderBy('date', 'DESC')
+                ->with(['product'])
+                ->get()
+                ->map(function ($movement) {
+                    return array_merge(
+                        $movement->product->toArray(),
+                        [
+                            'in_qty' => (int) $movement->in_qty,
+                            'out_qty' => (int) $movement->out_qty,
+                            'opn_qty' => (int) $movement->opn_qty,
+                        ]
+                    );
+                });;
+
+            $dates[$dt->format('Y-m-d')] = $movements;
+        }
+
+        $timestamp = Carbon::now()->isoFormat('DD_MMMM_YYYY_HH:mm:ss');
+        $filename = "Pergerakan_Stok_" . Str::slug($store->name, '_') . "-Exported_at_" . $timestamp . ".xlsx";
+        $path = public_path("storage/ekspor/" . $filename);
+        // return $dates;
+
+        return Excel::download(
+            new MovementReport([
+                'dates' => $dates,
+            ]),
+            $filename
+        );
+
+        return $dates;
+    }
     public function movementReport(Request $request) {
         $startDate = Carbon::parse($request->start_date)->startOfDay()->format('Y-m-d H:i:s');
         $endDate = Carbon::parse($request->end_date)->endOfDay()->format('Y-m-d H:i:s');
         $user = $request->user();
+        $user = User::where('email', 'takotekno.com@gmail.com')->first();
         $storeID = $user->access->store_id;
+        $store = Store::where('id', $storeID)->first();
+        $filter = [];
+        if ($request->q != "") {
+            array_push($filter, ['name', 'LIKE', '%'.$request->q.'%']);
+        }
 
         $products = Product::query()
+        ->where($filter)
         ->select('products.*')
         ->leftJoin('stock_movement_items', 'stock_movement_items.product_id', '=', 'products.id')
         ->leftJoin('stock_movements', 'stock_movements.id', '=', 'stock_movement_items.movement_id')
@@ -368,7 +449,7 @@ class StoreController extends Controller
             MAX(stock_movements.created_at) AS latest_movement_at,
             COALESCE(SUM(CASE WHEN stock_movements.type = 'IN' THEN stock_movement_items.quantity ELSE 0 END), 0) AS movement_in,
             COALESCE(SUM(CASE WHEN stock_movements.type = 'OUT' THEN stock_movement_items.quantity ELSE 0 END), 0) AS movement_out,
-            COALESCE(SUM(CASE WHEN stock_movements.type = 'OPN' THEN stock_movement_items.quantity ELSE 0 END), 0) AS movement_opn
+            COALESCE(SUM(CASE WHEN stock_movements.type = 'OPNAME' THEN stock_movement_items.quantity_diff ELSE 0 END), 0) AS movement_opn
         ")
         ->orderByDesc('latest_movement_at')
         ->with(['images'])
@@ -392,7 +473,7 @@ class StoreController extends Controller
                 DATE(stock_movements.created_at) as date,
                 SUM(CASE WHEN stock_movements.type = 'IN' THEN stock_movement_items.quantity ELSE 0 END) as in_qty,
                 SUM(CASE WHEN stock_movements.type = 'OUT' THEN stock_movement_items.quantity ELSE 0 END) as out_qty,
-                SUM(CASE WHEN stock_movements.type = 'OPN' THEN stock_movement_items.quantity ELSE 0 END) as opn_qty
+                SUM(CASE WHEN stock_movements.type = 'OPNAME' THEN stock_movement_items.quantity_diff ELSE 0 END) as opn_qty
             ")
             ->groupBy('date')
             ->orderBy('date', 'DESC')

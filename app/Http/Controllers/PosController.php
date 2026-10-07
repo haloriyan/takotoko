@@ -277,6 +277,7 @@ class PosController extends Controller
         $totalQuantity = 0;
         $totalPrice = 0;
         $totalCostPrice = 0;
+        $totalPoint = 0;
         $paymentMethod = $request->payment_method;
         $paymentStatus = $paymentMethod == "CASH" ? $request->payment_status : "PENDING";
         $paymentPayload = null;
@@ -310,6 +311,8 @@ class PosController extends Controller
                 $product = $cart->product;
                 $stock = $cart->stock;
                 $quantity = $cart->quantity;
+                Log::info($product);
+                $point = $product->point;
 
                 $margin = ($product->price - $stock->cost_price) * $quantity;
                 $sumPrice = $quantity * $product->price;
@@ -318,6 +321,7 @@ class PosController extends Controller
                 $totalMargin += $margin;
                 $totalQuantity += $quantity;
                 $totalCostPrice += $stock->cost_price;
+                $totalPoint += $point;
 
                 array_push($orderItems, [
                     'sku' => $stock->label,
@@ -378,6 +382,7 @@ class PosController extends Controller
             'total_price' => $totalPrice,
             'total_margin' => $totalMargin,
             'total_pay' => $totalPay,
+            'total_point' => $totalPoint,
             'fee' => $fee,
             'payment_status' => $paymentStatus,
             'payment_method' => $paymentMethod,
@@ -422,13 +427,16 @@ class PosController extends Controller
                 'quantity' => $quantity,
                 'total_price' => $quantity * $product->price,
                 'margin' => ($product->price - $stock->cost_price) * $quantity,
+                'point' => $product->point,
                 'notes' => $cart->notes,
                 'is_composition' => $cart->is_composition,
             ]);
 
-            Log::info($cart->is_composition);
-
             Cart::where('id', $cart->id)->delete();
+        }
+
+        if ($paymentStatus == "PAID") {
+            Customer::where('id', $customer->id)->increment('point', $totalPoint);
         }
 
         $sales = Sales::where('id', $sales->id)

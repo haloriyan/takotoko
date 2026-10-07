@@ -10,6 +10,7 @@
         </div>
         <select name="status" id="status" class="border rounded-lg text-sm text-slate-800 h-14 outline-none cursor-pointer" required>
             <option value="">Pilih...</option>
+            <option value="PENDING">PENDING</option>
             <option value="PAID">PAID</option>
             <option value="CANCELLED">CANCELLED</option>
         </select>

@@ -57,7 +57,7 @@ class StockistController extends Controller
                     } else if ($item->movement->type == "OUT") {
                         $prod->outbound += $item->quantity;
                     } else {
-                        $prod->opname += $item->quantity;
+                        $prod->opname += $item->quantity_diff;
                     }
                 }
             });
@@ -93,7 +93,7 @@ class StockistController extends Controller
         ]);
     }
 
-    public function store(Request $request) {
+    public function storexx(Request $request) {
         $user = $request->user();
         $storeID = $user->access->store_id;
         $items = $request->items;
@@ -141,6 +141,116 @@ class StockistController extends Controller
 
         return response()->json([
             'message' => "Berhasil menambahkan stok produk"
+        ]);
+    }
+
+    public function store(Request $request) {
+        $user = $request->user();
+        $storeID = $user->access->store_id;
+        $products = $request->products;
+        $totalQuantity = 0;
+        $totalPrice = 0;
+
+        $movementItems = [];
+
+        foreach ($products as $p => $product) {
+            $qty = $product['new_stock']['quantity'];
+            $price = $product['new_stock']['cost_price'];
+            $total = $price * $qty;
+
+            $totalQuantity += $qty;
+            $totalPrice += $total;
+
+            $stock = ProductStock::create([
+                'store_id' => $storeID,
+                'product_id' => $product['id'],
+                'label' => Str::slug($product['name'], '-'),
+                'cost_price' => $price,
+                'quantity' => $qty,
+                'start_quantity' => $qty,
+            ]);
+
+            array_push($movementItems, [
+                'store_id' => $storeID,
+                'product_id' => $product['id'],
+                'stock_id' => $stock->id,
+                'price' => $price,
+                'quantity' => $qty,
+                'quantity_diff' => $qty,
+                'total_price' => $total,
+            ]);
+        }
+
+        $label = date('Ymd') . $storeID . rand(1111, 9999);
+
+        $movement = StockMovement::create([
+            'store_id' => $storeID,
+            'user_id' => $user->id,
+            'label' => "IN" . $label,
+            'type' => "IN",
+            'total' => $totalQuantity,
+            'total_price' => $totalPrice,
+        ]);
+
+        foreach ($movementItems as $item) {
+            $item['movement_id'] = $movement->id;
+            StockMovementItem::create($item);
+        }
+
+        return response()->json([
+            'message' => "Berhasil menambahkan stok"
+        ]);
+    }
+    public function opname(Request $request) {
+        $user = $request->user();
+        $storeID = $user->access->store_id;
+        $products = $request->products;
+        $totalQuantity = 0;
+        $totalPrice = 0;
+
+        $movementItems = [];
+
+        foreach ($products as $p => $product) {
+            foreach ($product['available_stocks'] as $s => $stock) {
+                $sto = ProductStock::where('id', $stock['id']);
+                $oldStock = $sto->first();
+
+                $diff = $stock['quantity'] - $oldStock->quantity;
+                $totalQuantity += $diff;
+                $sto->update([
+                    'quantity' => $stock['quantity']
+                ]);
+                
+                array_push($movementItems, [
+                    'store_id' => $storeID,
+                    'product_id' => $product['id'],
+                    'stock_id' => $stock['id'],
+                    'price' => $oldStock->cost_price,
+                    'quantity' => $stock['quantity'],
+                    'quantity_diff' => $diff,
+                    'total_price' => $diff * $oldStock->cost_price,
+                ]);
+            }
+        }
+
+        $label = "OPN" . date('Ymd') . $storeID . rand(1111, 9999);
+
+        $movement = StockMovement::create([
+            'store_id' => $storeID,
+            'user_id' => $user->id,
+            'label' => $label,
+            'type' => "OPNAME",
+            'total_quantity' => $totalQuantity,
+            'total_price' => $totalPrice,
+        ]);
+
+        foreach ($movementItems as $item) {
+            $item['movement_id'] = $movement->id;
+            StockMovementItem::create($item);
+        }
+
+        return response()->json([
+            'message' => "Berhasil mengubah stok"
         ]);
     }
 }

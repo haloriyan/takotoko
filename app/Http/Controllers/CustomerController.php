@@ -5,7 +5,10 @@ namespace App\Http\Controllers;
 use App\Http\Requests\CustomerStoreRequest;
 use App\Http\Requests\CustomerUpdateRequest;
 use App\Models\Customer;
+use App\Models\Product;
 use App\Models\Sales;
+use App\Models\SalesItem;
+use Carbon\Carbon;
 use Illuminate\Http\Request;
 
 class CustomerController extends Controller
@@ -98,6 +101,8 @@ class CustomerController extends Controller
         $user = $request->user();
         $storeID = $user->access->store_id;
         $customer = Customer::where('id', $id)->where('store_id', $storeID)->first();
+        $startDate = Carbon::now()->subDays(30)->startOfDay()->format('Y-m-d H:i:s');
+        $endDate = Carbon::now()->endOfDay()->format('Y-m-d H:i:s');
 
         $sales = Sales::where([
             ['customer_id', $customer->id],
@@ -106,12 +111,26 @@ class CustomerController extends Controller
             'items.product.images'
         ])
         ->orderBy('created_at', 'DESC')
-        ->take(10)
+        ->take(5)
+        ->get();
+
+        $products = SalesItem::query()
+        ->select('product_id')
+        ->selectRaw('SUM(quantity) as total_quantity')
+        ->whereHas('sales', function ($query) use ($customer, $startDate, $endDate) {
+            $query->where('customer_id', $customer->id)
+                ->whereBetween('created_at', [$startDate, $endDate]);
+        })
+        ->with('product.images')
+        ->groupBy('product_id')
+        ->orderByDesc('total_quantity')
         ->get();
 
         return response()->json([
             'message' => 'Berhasil mengambil data customer '.$customer->name,
             'sales' => $sales,
+            'customer' => $customer,
+            'products' => $products,
         ]);
     }
 }

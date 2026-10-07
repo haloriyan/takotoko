@@ -26,6 +26,7 @@ return new class extends Migration
             $table->integer('total_quantity');
             $table->bigInteger('total_price');
             $table->bigInteger('total_margin');
+            $table->integer('total_point');
             $table->text('notes')->nullable();
             $table->timestamps();
         });
