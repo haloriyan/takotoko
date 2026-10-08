@@ -2,34 +2,31 @@
 
 namespace App\Exports;
 
-use Illuminate\Contracts\View\View;
-use Illuminate\Support\Collection;
-use Maatwebsite\Excel\Concerns\FromCollection;
-use Maatwebsite\Excel\Concerns\FromView;
-use Maatwebsite\Excel\Concerns\ShouldAutoSize;
+use Maatwebsite\Excel\Concerns\Export;
+use Maatwebsite\Excel\Concerns\WithMultipleSheets;
 
-class SalesReport implements FromView, ShouldAutoSize
+class SalesReport implements Export, WithMultipleSheets
 {
-    public $store;
-    public $sales;
-    public $start_date;
-    public $end_date;
+    public $dates;
+    public $theSheets;
 
     public function __construct($props)
     {
-        $this->store = $props['store'];
-        $this->sales = $props['sales'];
-        $this->start_date = $props['start_date'];
-        $this->end_date = $props['end_date'];
+        $this->dates = $props['dates'];
+        $theSheets = [];
+
+        foreach ($props['dates'] as $dt => $sales) {
+            array_push($theSheets, new SalesSheet([
+                'date' => $dt,
+                'sales' => $sales,
+            ]));
+        }
+
+        $this->theSheets = $theSheets;
     }
 
-    public function view(): View
+    public function sheets(): array
     {
-        return view('export.sales', [
-            'store' => $this->store,
-            'sales' => $this->sales,
-            'start_date' => $this->start_date,
-            'end_date' => $this->end_date,
-        ]);
+        return $this->theSheets;
     }
 }

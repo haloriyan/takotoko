@@ -279,24 +279,7 @@ class StoreController extends Controller
         }
 
         if ($request->download == 1) {
-            $sales = $sl->with(['user', 'customer'])->get();
-            $store = $user->access->store;
-            $timestamp = Carbon::now()->isoFormat('DD_MMMM_YYYY_HH:mm:ss');
-
-            $filename = "Laporan_Penjualan_" . Str::slug($store->name, '_') . "-Exported_at_".$timestamp.".xlsx";
-
-            $exp = Excel::store(
-                new SalesReport([
-                    'sales' => $sales,
-                    'store' => $store,
-                    'start_date' => $startDate->format('Y-m-d'),
-                    'end_date' => $endDate->format('Y-m-d'),
-                ]),
-                'ekspor/' . $filename,
-                'mine'
-            );
-
-            return response()->json(['ok']);
+            return $this->salesReportExport($request);
         }
         $sales = $sl->with(['user', 'customer'])->paginate(20);
 
@@ -351,6 +334,65 @@ class StoreController extends Controller
             'margin_chart' => $marginChart,
             'volume' => $volume,
         ]);
+    }
+    public function salesReportExport(Request $request) {
+        $startDate = Carbon::parse($request->start_date)->startOfDay();
+        $endDate = Carbon::parse($request->end_date)->endOfDay();
+        $user = $request->user();
+        $storeID = $user->access->store_id;
+        $store = $user->access->store;
+
+        $filter = [['store_id', $storeID]];
+
+        $paymentMethod = $request->payment_method ?? null;
+        $paymentStatus = $request->payment_status ?? null;
+
+        if ($paymentMethod != "null") {
+            array_push($filter, ['payment_method', $paymentMethod]);
+        }
+        if ($paymentStatus != "null") {
+            array_push($filter, ['payment_status', $paymentStatus]);
+        }
+
+        $query = Sales::where($filter)
+            ->whereBetween('created_at', [
+                $startDate->format('Y-m-d H:i:s'),
+                $endDate->format('Y-m-d H:i:s'),
+            ])
+            ->orderBy('created_at', 'DESC');
+
+        if ($request->q != "") {
+            $query->whereHas('customer', function ($q) use ($request) {
+                $q->where('name', 'LIKE', '%'.$request->q.'%');
+            });
+        }
+
+        $sales = $query->with(['user', 'customer'])->get();
+        $period = CarbonPeriod::create($startDate->format('Y-m-d'), $endDate->format('Y-m-d'));
+        $dates = [];
+
+        foreach ($period as $dt) {
+            $dates[$dt->format('Y-m-d')] = collect();
+        }
+
+        foreach ($sales as $sale) {
+            $date = Carbon::parse($sale->created_at)->format('Y-m-d');
+            if (!isset($dates[$date])) {
+                $dates[$date] = collect();
+            }
+
+            $dates[$date]->push($sale);
+        }
+
+        $timestamp = Carbon::now()->isoFormat('DD_MMMM_YYYY_HH:mm:ss');
+        $filename = "Laporan_Penjualan_" . Str::slug($store->name, '_') . "-Exported_at_" . $timestamp . ".xlsx";
+
+        return Excel::download(
+            new SalesReport([
+                'dates' => $dates,
+            ]),
+            $filename
+        );
     }
     public function movementReportExport(Request $request) {
         $startDate = Carbon::parse($request->start_date)->format('Y-m-d');

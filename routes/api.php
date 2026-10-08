@@ -132,6 +132,7 @@ Route::group(['prefix' => 'store'], function () {
 
         Route::group(['prefix' => "report"], function () {
             Route::get('sales', [StoreController::class, 'salesReport']);
+            Route::get('sales/export', [StoreController::class, 'salesReportExport']);
             Route::get('sales/{id}/detail', [SalesController::class, 'detail']);
             Route::get('movement', [StoreController::class, 'movementReport']);
             Route::get('movement/export', [StoreController::class, 'movementReportExport']);

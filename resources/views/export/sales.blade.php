@@ -1,17 +1,33 @@
+@php
+    use Carbon\Carbon;
+@endphp
+
 <table>
-    <tr>
-        <th colspan="4" style="font-size: 32px;font-weight: 700;background: #eeeeee;text-align: center;vertical-align: middle">Laporan Penjualan</th>
-    </tr>
-    <tr>
-        <td>Periode</td>
-        <td colspan="3">
-            {{ $start_date }} - {{ $end_date }}
-        </td>
-    </tr>
-    <tr>
-        <td style="background: #2196f3;color: #ffffff;font-size: 16px;font-weight: 500;">Omset</td>
-        <td style="font-size: 16px;">{{ currency_encode(25000) }}</td>
-        <td style="background: #2ecc71;color: #ffffff;font-size: 16px;font-weight: 500;">Margin</td>
-        <td style="font-size: 16px;">{{ currency_encode(12000) }}</td>
-    </tr>
+    <thead>
+        <tr>
+            <th colspan="7" style="font-size: 24px;font-weight: 700;background: #eeeeee;text-align: center;vertical-align: middle">{{ isset($date) ? Carbon::parse($date)->isoFormat('DD MMMM YYYY') : 'Laporan Penjualan' }}</th>
+        </tr>
+        <tr>
+            <th style="background: #dddddd;font-weight: 700;">Invoice</th>
+            <th style="background: #dddddd;font-weight: 700;">Pelanggan</th>
+            <th style="background: #dddddd;font-weight: 700;">Tanggal</th>
+            <th style="background: #dddddd;font-weight: 700;">Total</th>
+            <th style="background: #dddddd;font-weight: 700;">Pembayaran</th>
+            <th style="background: #dddddd;font-weight: 700;">Status</th>
+            <th style="background: #dddddd;font-weight: 700;">Kasir</th>
+        </tr>
+    </thead>
+    <tbody>
+        @foreach ($sales as $sale)
+            <tr>
+                <td>{{ $sale->invoice_number }}</td>
+                <td>{{ $sale->customer->name ?? '-' }}</td>
+                <td>{{ Carbon::parse($sale->created_at)->format('d M Y, H:i') }}</td>
+                <td>{{ currency_encode($sale->total_price) }}</td>
+                <td>{{ $sale->payment_method }}</td>
+                <td>{{ $sale->payment_status }}</td>
+                <td>{{ $sale->user->name ?? '-' }}</td>
+            </tr>
+        @endforeach
+    </tbody>
 </table>
