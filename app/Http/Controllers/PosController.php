@@ -441,7 +441,7 @@ class PosController extends Controller
 
         $sales = Sales::where('id', $sales->id)
         ->with([
-            'customer', 'user', 'items.product.images'
+            'customer', 'user', 'items.product.images', 'store'
         ])
         ->first();
 

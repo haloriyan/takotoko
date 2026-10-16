@@ -13,7 +13,7 @@ class SalesController extends Controller
     public function detail($id) {
         $sales = Sales::where('id', $id)
         ->with([
-            'customer', 'user', 'items.product.images'
+            'customer', 'user', 'items.product.images', 'store'
         ])
         ->first();
 

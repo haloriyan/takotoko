@@ -249,8 +249,6 @@ class UserController extends Controller
             ->orderByDesc('total_quantity')
             ->get();
 
-            Log::info(json_encode($highestVolume, JSON_PRETTY_PRINT));
-
         // This is ChatGPT generated code, for getting peak hours of a specific date, 
         // please DO NOT edit partially
         $sales = DB::table('sales')
@@ -262,34 +260,35 @@ class UserController extends Controller
             ')
             ->where('store_id', $storeID)
             ->whereBetween('created_at', [
-                $date->copy()->startOfDay(),
-                $date->copy()->endOfDay(),
+                Carbon::now()->subDays(7)->startOfDay(),
+                Carbon::now()->endOfDay()
             ])
             ->groupByRaw('FLOOR(HOUR(created_at) / 3)')
             ->orderBy('period')
             ->get();
 
-        $hours = collect(range(0, 7))
-            ->map(function (int $period) use ($sales) {
-                $sale = $sales->firstWhere('period', $period);
+            Log::info($sales);
 
-                $startHour = $period * 3;
-                $endHour = $startHour + 3;
+        $hours = collect(range(0, 7))->map(function (int $period) use ($sales) {
+            $sale = $sales->firstWhere('period', $period);
 
-                $time = sprintf(
+            $startHour = $period * 3;
+            $endHour = $startHour + 3;
+
+            return [
+                'period' => $period,
+                'time' => sprintf(
                     '%02d:00-%02d:00',
                     $startHour,
                     $endHour === 24 ? 0 : $endHour
-                );
+                ),
+                'transactions' => (int) ($sale->transactions ?? 0),
+                'quantity' => (int) ($sale->quantity ?? 0),
+                'revenue' => (int) ($sale->revenue ?? 0),
+            ];
+        });
 
-                return [
-                    'period' => $period,
-                    'time' => $time,
-                    'transactions' => (int) ($sale?->transactions ?? 0),
-                    'quantity' => (int) ($sale?->quantity ?? 0),
-                    'revenue' => (int) ($sale?->revenue ?? 0),
-                ];
-            });
+        Log::info($hours);
 
         $pendingBalance = 0;
         $salesPendingPayout = Sales::where([
