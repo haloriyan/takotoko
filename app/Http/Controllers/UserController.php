@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Models\CmsContent;
 use App\Models\Customer;
 use App\Models\Otp;
+use App\Models\Product;
 use App\Models\Sales;
 use App\Models\SalesItem;
 use App\Models\Store;
@@ -221,6 +222,7 @@ class UserController extends Controller
     public function home(Request $request) {
         $user = $request->user();
         $storeID = $user->access->store_id;
+        $store = $user->access->store;
         $date = Carbon::now();
 
         $contents = CmsContent::inRandomOrder()
@@ -267,8 +269,6 @@ class UserController extends Controller
             ->orderBy('period')
             ->get();
 
-            Log::info($sales);
-
         $hours = collect(range(0, 7))->map(function (int $period) use ($sales) {
             $sale = $sales->firstWhere('period', $period);
 
@@ -288,8 +288,6 @@ class UserController extends Controller
             ];
         });
 
-        Log::info($hours);
-
         $pendingBalance = 0;
         $salesPendingPayout = Sales::where([
             ['store_id', $storeID],
@@ -303,6 +301,23 @@ class UserController extends Controller
             $pendingBalance += $sale->total_price;
         }
 
+        $lowStocks = Product::where('store_id', $storeID)
+        ->whereRaw('
+            (
+                SELECT COALESCE(SUM(product_stocks.quantity), 0)
+                FROM product_stocks
+                WHERE product_stocks.product_id = products.id
+            ) < ?
+        ', [10])
+        ->withSum('stocks as total_stock', 'quantity')
+        ->with([
+            'stocks' => function ($query) use ($store) {
+                getStock($query, $store->stock_method);
+            },
+            'images'
+        ])
+        ->get();
+
         return response()->json([
             'user' => $user,
             'revenue' => (int) $revenue,
@@ -310,6 +325,7 @@ class UserController extends Controller
             'hours' => $hours,
             'contents' => $contents,
             'pending_balance' => $pendingBalance,
+            'low_stocks' => $lowStocks,
         ]);
     }
     public function homeSales(Request $request) {

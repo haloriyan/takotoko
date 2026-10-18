@@ -24,6 +24,22 @@ function paket($store) {
 function nullify($value) {
 	return $value === "null" ? null : $value;
 }
+function getStock($query, $method) {
+	// $query is from product.stock model
+	$method = strtoupper($method);
+	if ($method == "FIFO") {
+		return $query->orderBy('created_at', 'ASC');
+	} else if ($method == "LIFO") {
+		return $query->orderBy('created_at', 'DESC');
+	} else if ($method == "FEFO") {
+		return $query->orderByRaw('expired_at IS NULL')
+					->orderBy('expired_at', 'ASC')
+					->orderBy('created_at', 'ASC');
+	} else if ($method == "CHEAPEST") {
+		return $query->orderBy('cost_price', 'ASC')
+					 ->orderBy('created_at', 'ASC');
+	}
+}
 function Substring($text, $count) {
     $toReturn = substr($text, 0, $count);
     $rest = explode($toReturn, $text);

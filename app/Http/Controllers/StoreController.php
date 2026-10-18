@@ -576,7 +576,11 @@ class StoreController extends Controller
         $all = $rev->get(['id', 'rate']);
 
         $count = $all->count();
-        $avg = rtrim(rtrim(number_format($all->sum('rate') / $count, 1), '0'), '.');
+        if ($count > 0) {
+            $avg = rtrim(rtrim(number_format($all->sum('rate') / $count, 1), '0'), '.') ?? 0;
+        } else {
+            $avg = 0;
+        }
 
         $reviews = $rev->orderBy('created_at', 'DESC')
         ->with(['customer', 'sales.items.product.images', 'sales.customer', 'sales.user'])

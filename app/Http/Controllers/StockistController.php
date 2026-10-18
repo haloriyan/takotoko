@@ -150,6 +150,7 @@ class StockistController extends Controller
         $products = $request->products;
         $totalQuantity = 0;
         $totalPrice = 0;
+        $supplierID = $request->supplier_id;
 
         $movementItems = [];
 
@@ -164,6 +165,7 @@ class StockistController extends Controller
             $stock = ProductStock::create([
                 'store_id' => $storeID,
                 'product_id' => $product['id'],
+                'supplier_id' => $supplierID,
                 'label' => Str::slug($product['name'], '-'),
                 'cost_price' => $price,
                 'quantity' => $qty,
@@ -186,6 +188,7 @@ class StockistController extends Controller
         $movement = StockMovement::create([
             'store_id' => $storeID,
             'user_id' => $user->id,
+            'supplier_id' => $supplierID,
             'label' => "IN" . $label,
             'type' => "IN",
             'total' => $totalQuantity,

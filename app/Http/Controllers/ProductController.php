@@ -278,12 +278,14 @@ class ProductController extends Controller
         $storeID = $user->access->store_id;
         $costPrice = $request->cost_price;
         $quantity = $request->quantity;
+        $supplierID = $request->supplier_id;
 
         $product = Product::where('id', $id)->first();
 
         $stock = ProductStock::create([
             'product_id' => $id,
             'store_id' => $storeID,
+            'supplier_id' => $supplierID,
             'label' => $request->label,
             'quantity' => $quantity,
             'start_quantity' => $quantity,
@@ -293,6 +295,7 @@ class ProductController extends Controller
         $movement = StockMovement::create([
             'user_id' => $user->id,
             'store_id' => $storeID,
+            'supplier_id' => $supplierID,
             'label' => "IN" . Carbon::now()->isoFormat('YYYYMMDDHHmmss'),
             'total_quantity' => $quantity,
             'total_price' => $costPrice * $quantity,
