@@ -24,7 +24,7 @@
 </head>
 <body class="bg-primary-body">
 
-<div class="w-full h-20 flex items-center justify-between gap-4 px-4 md:px-20 sticky z-20 top-0 left-0 right-0 bg-white" id="header">
+<div class="w-full h-20 flex items-center justify-between gap-4 px-4 md:px-20 sticky z-20 top-0 left-0 right-0 bg-primary-body" id="header">
     @php
         $route = Route::currentRouteName();
         $routes = explode(".", $route);

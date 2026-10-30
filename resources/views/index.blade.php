@@ -3,7 +3,7 @@
 @section('title', "Home")
 
 @section('content')
-<section class="w-full aspect-[16/9] flex mobile:flex-col items-center gap-10 p-20 mobile:p-8">
+<section class="w-full aspect-[16/9] flex mobile:flex-col items-center gap-10 p-20 mobile:p-8 bg-primary-body">
     <div class="flex flex-col mobile:items-center mobile:text-center gap-4 w-6/12 mobile:w-full mobile:pt-8">
         <div class="flex">
             <div class="text-xs p-2 px-3 rounded-lg text-primary bg-primary bg-opacity-25">
@@ -295,4 +295,67 @@
         </a>
     </div>
 </section>
+
+<section class="p-20 mobile:p-8 flex flex-col gap-4">
+    <div>
+        <div class="text-primary text-sm">Blog</div>
+        <h3 class="text-[38px] mobile:text-[20px] text-slate-800 font-bold">
+            Selalu ada insight baru untukmu.
+        </h3>
+    </div>
+    <div class="flex items-center gap-4 overflow-x-auto whitespace-nowrap">
+        @foreach ($categories as $c => $category)
+            <div class="BlogCategoryBtn cursor-pointer text-xs rounded-full p-2 px-4 bg-primary-transparent text-primary font-medium" data-category="{{ $category }}" onclick="toggleBlogCategory(this)">
+                {{ $category->name }}
+            </div>
+        @endforeach
+    </div>
+
+    <div></div>
+
+    @foreach ($categories as $c => $cat)
+        <div data-category-id="{{ $cat->id }}" class="hidden BlogPost flex flex-col gap-8">
+            <div class="grid grid-cols-4 mobile:grid-cols-2 gap-8 mobile:gap-4">
+                @foreach ($cat->posts as $post)
+                    <a href="{{ route('blog.read', $post->slug) }}" class="flex flex-col gap-4">
+                        <img 
+                            src="{{ $post->cover }}" alt="{{ $post->title }}"
+                            class="w-full aspect-video object-cover rounded-lg"
+                        >
+                        <h4 class="text-slate-800 mobile:text-xs font-medium">
+                            {{ $post->title }}
+                        </h4>
+                    </a>
+                @endforeach
+            </div>
+
+            <div class="flex justify-end">
+                <a href="{{ route('blog.category', $cat->slug) }}" class="bg-white rounded-full p-3 px-4 shadow-lg text-sm text-primary font-medium">
+                    Baca Tulisan {{ $cat->name }} Lainnya. (Ada {{ $cat->post_count }} lagi).
+                </a>
+            </div>
+        </div>
+    @endforeach
+</section>
+@endsection
+
+@section('javascript')
+<script>
+    const toggleBlogCategory = btn => {
+        let category = JSON.parse(btn.dataset.category);
+
+        selectAll(".BlogCategoryBtn").forEach(item => {
+            item.classList.remove('bg-primary', 'text-white', 'font-medium');
+            item.classList.add('bg-primary-transparent', 'text-primary', 'font-medium');
+        });
+        
+        btn.classList.remove('bg-primary-transparent', 'text-primary', 'font-medium');
+        btn.classList.add('bg-primary', 'text-white', 'font-medium');
+
+        selectAll(".BlogPost").forEach(item => item.classList.add('hidden'));
+        select(`.BlogPost[data-category-id='${category.id}']`).classList.remove('hidden');
+    }
+
+    selectAll(".BlogCategoryBtn")[0].click();
+</script>
 @endsection

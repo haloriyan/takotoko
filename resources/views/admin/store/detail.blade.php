@@ -18,7 +18,7 @@
 @endphp
 
 @section('content')
-<div class="p-8 flex flex-col">
+<div class="p-8 mobile:p-4 flex flex-col">
     <a href="{{ route('admin.master.stores') }}" class="flex items-center gap-2">
         <ion-icon name="arrow-back-outline" class="text-sm"></ion-icon>
         <div class="text-xs text-slate-700">Kembali</div>
@@ -29,46 +29,46 @@
     </div>
 
     <div class="bg-white rounded-lg p-8 shadow mt-4">
-        <div class="flex items-center gap-4">
-            <div class="w-24 h-24 rounded-lg flex items-center justify-center rounded-lg">
+        <div class="flex items-center mobile:shrink-1 gap-4">
+            <div class="w-24 h-24 aspect-square rounded-lg flex items-center justify-center rounded-lg">
                 @if ($store->icon == null)
                     <ion-icon name="storefront-outline" class="text-lg text-slate-700"></ion-icon>
                 @else
                     <img 
                         src="{{ asset('storage/store_icons/' . $store->icon) }}" 
                         alt="{{ $store->name }}"
-                        class="w-24 h-24 object-cover rounded-lg"
+                        class="w-24 h-24 aspect-square object-cover rounded-lg"
                     >
                 @endif
             </div>
-            <div class="flex flex-col gap-[2px] basis-32 grow">
-                <div class="text-slate-700 font-medium text-lg">{{ $store->name }}</div>
+            <div class="flex flex-col gap-[2px] basis-32 mobile:basis-64 grow">
+                <div class="text-slate-700 font-medium text-lg mobile:text-base">{{ $store->name }}</div>
                 <div class="text-slate-500 text-xs">{{ "@".$store->username }}</div>
                 <div class="flex mt-4">
                     <div class="text-xs font-medium p-1 px-3 rounded font-medium {{ $paketBgColor }} {{ $paketTextColor }}">{{ strtoupper($store->package) }}</div>
                 </div>
             </div>
-            <div class="flex flex-col gap-2 basis-32 grow">
+            <div class="flex flex-col gap-2 basis-32 mobile:basis-[400px] grow">
                 <div class="flex items-center gap-2">
                     <ion-icon name="people-outline" class="text-primary text-lg"></ion-icon>
-                    <div class="text-xs text-slate-500">Jumlah Karyawan</div>
+                    <div class="text-xs text-slate-500 mobile:hidden">Jumlah Karyawan</div>
                     <div class="text-sm text-slate-800 font-medium">{{ $store->accesses->count() }}</div>
                 </div>
                 <div class="flex items-center gap-2">
                     <ion-icon name="cube-outline" class="text-primary text-lg"></ion-icon>
-                    <div class="text-xs text-slate-500">Produk</div>
+                    <div class="text-xs text-slate-500 mobile:hidden">Produk</div>
                     <div class="text-sm text-slate-800 font-medium">{{ $productsCount }}</div>
                 </div>
                 <div class="flex items-center gap-2">
                     <ion-icon name="cart-outline" class="text-primary text-lg"></ion-icon>
-                    <div class="text-xs text-slate-500">Transaksi</div>
+                    <div class="text-xs text-slate-500 mobile:hidden">Transaksi</div>
                     <div class="text-sm text-slate-800 font-medium">{{ $salesCount }}</div>
                 </div>
             </div>
         </div>
     </div>
 
-    <div class="grid grid-cols-2 gap-8 mt-8">
+    <div class="grid grid-cols-2 mobile:grid-cols-1 gap-8 mt-8 mobile:mt-4">
         <div class="bg-white rounded-lg shadow">
             <div class="p-4 px-8 border-b font-medium text-slate-800 flex items-center gap-4">
                 <ion-icon name="cube-outline" class="text-lg"></ion-icon>

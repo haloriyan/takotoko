@@ -21,7 +21,7 @@ return [
             'colors' => [
                 'primary' => "#2196f3",
                 'primary-transparent' => "#2196f325",
-                'primary-body' => "#2196f310",
+                'primary-body' => "#F0F7FF",
             ]
         ]
     ],

@@ -52,7 +52,17 @@ class PageController extends Controller
         return $pay;
     }
     public function index() {
-        return view('index');
+        $categories = CmsCategory::inRandomOrder()
+        ->with([
+            'posts' => function ($query) {
+                $query->inRandomOrder()->take(8);
+            }
+        ])
+        ->get();
+
+        return view('index', [
+            'categories' => $categories,
+        ]);
     }
     public function about() {
         return view('about');

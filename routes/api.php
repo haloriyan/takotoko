@@ -23,6 +23,7 @@ Route::get('/user', function (Request $request) {
 })->middleware('auth:sanctum');
 
 Route::get('plan', [UserController::class, 'plan']);
+Route::get('k/{type}', [UserController::class, 'getKeys']);
 
 Route::group(['prefix' => "v2"], function () {
     Route::get('tes', [CmsController::class, 'tes']);

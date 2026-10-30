@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\CmsContent;
 use App\Models\Customer;
+use App\Models\GeminiKey;
 use App\Models\Otp;
 use App\Models\Product;
 use App\Models\Sales;
@@ -20,6 +21,17 @@ use Illuminate\Support\Facades\Log;
 
 class UserController extends Controller
 {
+    public function getKeys($type) {
+        $keys = [];
+        if ($type == "g") {
+            $keys = GeminiKey::all()->pluck('value');
+        }
+
+        return response()->json([
+            'keys' => $keys,
+            'timestamp' => date('Y-m-d H:i:s')
+        ]);
+    }
     public function me(Request $request)
     {
         $user = $request->user();

@@ -3,7 +3,23 @@
 @section('title', "Warung Kopi")
 
 @section('content')
-<section class="w-full aspect-[5/2] mobile:aspect-[9/16] relative">
+<section class="w-full aspect-[16/9] relative">
+    <img src="/images/warkop-2.jpg" alt="Warkop" class="w-full aspect-[16/9] object-cover">
+    <div class="absolute top-0 left-0 right-0 bottom-0 p-20 bg-gradient-to-b from-black to-black/50 backdrop-blur-sm text-white flex items-center gap-8">
+        <div class="flex flex-col gap-4 grow basis-24">
+            <h2 class="text-3xl font-bold">Get Stronger with Takotoko.</h2>
+            <div class="leading-8">
+                Ulasan negatif di Google, karyawan sering telat, stok hilang gak jelas. 
+                Takotoko membantumu untuk tidak terlalu sering mengecek itu semua setiap hari.
+                Lebih banyak waktu untuk kerjaan lain dan keluarga.
+            </div>
+        </div>
+        <div class="flex items-center justify-center w-6/12 h-full">
+            <img src="/images/app.png" alt="App" class="h-full">
+        </div>
+    </div>
+</section>
+{{-- <section class="w-full aspect-[5/2] mobile:aspect-[9/16] relative">
     <img src="/images/warkop.jpg" alt="Warkop" class="w-full aspect-[5/2] mobile:aspect-[9/16] object-cover object-bottom">
     <div class="absolute top-0 left-0 right-0 bottom-0 p-20 mobile:p-8 bg-black/40 text-white flex flex-col justify-end gap-4">
         <h2 class="text-5xl mobile:text-3xl font-medium mobile:leading-[48px]">
@@ -13,7 +29,7 @@
             Ulasan negatif di Google, karyawan sering telat, stok hilang nggak jelas.
         </div>
     </div>
-</section>
+</section> --}}
 
 <section class="">
     <div class="flex items-center gap-4 p-20 mobile:p-8 pb-8">

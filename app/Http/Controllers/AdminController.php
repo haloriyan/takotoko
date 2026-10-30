@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\CmsCategory;
+use App\Models\GeminiKey;
 use App\Models\Store;
 use App\Models\User;
 use Illuminate\Http\Request;
@@ -83,6 +84,16 @@ class AdminController extends Controller
             'basics' => $basics,
             'starters' => $starters,
             'pros' => $pros,
+        ]);
+    }
+
+    public function geminiKeys() {
+        $keys = GeminiKey::orderBy('created_at', 'DESC')->get();
+        $message = Session::get('message');
+
+        return view('admin.settings.geminiKeys.index', [
+            'keys' => $keys,
+            'message' => $message,
         ]);
     }
 }

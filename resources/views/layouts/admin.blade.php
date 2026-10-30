@@ -102,6 +102,22 @@
         </div>
     </div>
 
+    <div class="group relative">
+        <a href="#" class="flex items-center gap-4 text-slate-500 {{ (@$routes[1] == 'settings') ? 'bg-primary-transparent text-primary' : '' }}">
+            <div class="h-12 w-1 {{ (@$routes[1] == 'settings') ? 'bg-primary' : 'bg-white' }}"></div>
+            <ion-icon name="settings-outline" class="{{ (@$routes[1] == 'settings') ? 'text-primary' : '' }}"></ion-icon>
+            <div class="text-sm flex grow {{ (@$routes[1] == 'settings') ? 'text-primary' : '' }}">Settings</div>
+            <ion-icon name="chevron-down-outline" class="me-4"></ion-icon>
+        </a>
+        <div class="{{ (@$routes[1] == 'settings') ? 'flex' : 'hidden' }} group-hover:flex flex-col mt-2 mb-2">
+            <a href="{{ route('admin.settings.geminiKeys') }}" class="flex items-center gap-4 text-slate-500">
+                <div class="h-10 w-1 bg-white"></div>
+                <ion-icon name="ellipse-outline" class="text-[8px] {{ (@$routes[2] == 'geminiKeys') ? 'text-primary' : '' }}"></ion-icon>
+                <div class="text-sm flex grow {{ (@$routes[2] == 'geminiKeys') ? 'text-primary' : '' }}">Gemini Keys</div>
+            </a>
+        </div>
+    </div>
+
     {{-- @if (in_array($role, ['admin']))
         <div class="group relative">
             <a href="#" class="flex items-center gap-4 text-slate-500 {{ $routes[1] == 'settings' ? 'bg-primary-transparent text-primary' : '' }}">
