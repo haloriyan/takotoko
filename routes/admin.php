@@ -37,6 +37,11 @@ Route::group(['prefix' => "admin"], function () {
                 Route::get('{id}/delete', [GeminiKeyController::class, 'delete'])->name('admin.settings.geminiKeys.delete');
                 Route::get('/', [AdminController::class, 'geminiKeys'])->name('admin.settings.geminiKeys');
             });
+
+            Route::match(['get', 'post'], 'backup', [AdminController::class, 'backupSettings'])->name('admin.settings.backup');
+            Route::post('restore', [AdminController::class, 'restoreSettings'])->name('admin.settings.restore');
+            Route::post('restore-file', [AdminController::class, 'restoreFromStorage'])->name('admin.settings.restore.file');
+            Route::post('restore-stream', [AdminController::class, 'restoreFromStream'])->name('admin.settings.restore.stream');
         });
     });
 });

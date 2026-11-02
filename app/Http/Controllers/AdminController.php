@@ -6,9 +6,14 @@ use App\Models\CmsCategory;
 use App\Models\GeminiKey;
 use App\Models\Store;
 use App\Models\User;
+use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Session;
+use Illuminate\Support\Facades\File;
+use ZipArchive;
 
 class AdminController extends Controller
 {
@@ -95,5 +100,269 @@ class AdminController extends Controller
             'keys' => $keys,
             'message' => $message,
         ]);
+    }
+
+    public function backupSettings(Request $request) {
+        if ($request->method() == "GET") {
+            return view('admin.settings.backup', [
+                'message' => Session::get('message'),
+            ]);
+        }
+
+        // action=backup will trigger backup creation
+        if ($request->has('action') && $request->action == 'backup') {
+            $tablesRaw = DB::select('SHOW TABLES');
+            $tables = [];
+            foreach ($tablesRaw as $row) {
+                $rowArr = (array)$row;
+                $tables[] = array_values($rowArr)[0];
+            }
+
+            $tmpDir = storage_path('app/backups/tmp_' . uniqid());
+            File::makeDirectory($tmpDir, 0755, true);
+
+            foreach ($tables as $table) {
+                $rows = DB::table($table)->get()->map(function ($r) { return (array)$r; })->toArray();
+                File::put($tmpDir . '/' . $table . '.json', json_encode($rows));
+            }
+
+            $zipName = 'backup_' . Carbon::now()->format('YmdHis') . '.zip';
+            $zipPath = storage_path('app/backups/' . $zipName);
+
+            $zip = new ZipArchive();
+            if ($zip->open($zipPath, ZipArchive::CREATE) === true) {
+                // add json dumps
+                $files = File::files($tmpDir);
+                foreach ($files as $f) {
+                    $zip->addFile($f->getPathname(), $f->getFilename());
+                }
+
+                // include public/storage directory (if exists)
+                $publicStorage = public_path('storage');
+                if (File::exists($publicStorage)) {
+                    $all = File::allFiles($publicStorage);
+                    foreach ($all as $f) {
+                        $abs = $f->getPathname();
+                        $relative = ltrim(str_replace($publicStorage, '', $abs), DIRECTORY_SEPARATOR);
+                        $zip->addFile($abs, 'public_storage/' . $relative);
+                    }
+
+                    // also add empty directories under public/storage
+                    $dirs = File::allDirectories($publicStorage);
+                    foreach ($dirs as $d) {
+                        $relDir = ltrim(str_replace($publicStorage, '', $d), DIRECTORY_SEPARATOR);
+                        if ($relDir != '') {
+                            $zip->addEmptyDir('public_storage/' . $relDir);
+                        }
+                    }
+                }
+
+                $zip->close();
+            }
+
+            File::deleteDirectory($tmpDir);
+
+            // Return the ZIP as a download and delete it after sending
+            return response()->download($zipPath, $zipName)->deleteFileAfterSend(true);
+        }
+
+        return redirect()->back();
+    }
+
+    public function restoreSettings(Request $request) {
+        if (!$request->hasFile('restore_file')) {
+            return redirect()->back()->withErrors(['Tidak ada file yang diupload']);
+        }
+
+        $file = $request->file('restore_file');
+        $name = 'restore_upload_' . uniqid() . '.zip';
+        $stored = null;
+        $zipPath = storage_path('app/backups/' . $name);
+
+        // Try storing the file and record results. Provide multiple fallbacks.
+        $attempts = [];
+
+        // 1) default storeAs
+        try {
+            $stored = $file->storeAs('backups', $name);
+            $attempts['storeAs'] = $stored;
+        } catch (\Exception $e) {
+            $attempts['storeAs_exception'] = $e->getMessage();
+        }
+
+        // 2) try move()
+        if (!File::exists($zipPath) || !is_readable($zipPath)) {
+            try {
+                $moved = $file->move(storage_path('app/backups'), $name);
+                $attempts['move'] = $moved ? 'ok' : 'failed';
+            } catch (\Exception $e) {
+                $attempts['move_exception'] = $e->getMessage();
+            }
+        }
+
+        // 3) try copy via real path
+        if ((!File::exists($zipPath) || !is_readable($zipPath)) && $file->getRealPath()) {
+            try {
+                File::copy($file->getRealPath(), $zipPath);
+                $attempts['copy_realpath'] = 'ok';
+            } catch (\Exception $e) {
+                $attempts['copy_realpath_exception'] = $e->getMessage();
+            }
+        }
+
+        // 4) try stream copy as last resort
+        if (!File::exists($zipPath) || !is_readable($zipPath)) {
+            try {
+                $streamIn = $file->openFile('r');
+                $out = fopen($zipPath, 'wb');
+                while (!$streamIn->eof()) {
+                    fwrite($out, $streamIn->fgets());
+                }
+                fclose($out);
+                $attempts['stream_copy'] = 'ok';
+            } catch (\Exception $e) {
+                $attempts['stream_copy_exception'] = $e->getMessage();
+            }
+        }
+
+        // Diagnostic logging
+        try {
+            $size = File::exists($zipPath) ? File::size($zipPath) : null;
+        } catch (\Exception $e) {
+            $size = null;
+        }
+        
+        $tmpDir = storage_path('app/backups/restore_' . uniqid());
+        File::makeDirectory($tmpDir, 0755, true);
+
+        // basic file checks
+        if (!File::exists($zipPath) || File::size($zipPath) === 0) {
+            File::delete($zipPath);
+            File::deleteDirectory($tmpDir);
+            return redirect()->back()->withErrors(['File zip tidak valid atau kosong']);
+        }
+
+        $zip = new ZipArchive();
+        $res = $zip->open($zipPath);
+        if ($res === true) {
+            $zip->extractTo($tmpDir);
+            $zip->close();
+        } else {
+            File::delete($zipPath);
+            File::deleteDirectory($tmpDir);
+            return redirect()->back()->withErrors(['File zip tidak valid (kode: ' . $res . ')']);
+        }
+
+        // Disable foreign key checks
+        DB::statement('SET FOREIGN_KEY_CHECKS=0');
+
+        $files = File::files($tmpDir);
+        foreach ($files as $f) {
+            $table = pathinfo($f->getFilename(), PATHINFO_FILENAME);
+            $content = File::get($f->getPathname());
+            $rows = json_decode($content, true);
+            if (is_array($rows)) {
+                DB::table($table)->truncate();
+                if (count($rows) > 0) {
+                    $chunks = array_chunk($rows, 1000);
+                    foreach ($chunks as $chunk) {
+                        DB::table($table)->insert($chunk);
+                    }
+                }
+            }
+        }
+
+        DB::statement('SET FOREIGN_KEY_CHECKS=1');
+
+        File::delete($zipPath);
+        File::deleteDirectory($tmpDir);
+
+        return redirect()->back()->with([
+            'message' => 'Restore selesai',
+        ]);
+    }
+
+    // Restore directly from an existing file in storage/app/backups
+    public function restoreFromStorage(Request $request) {
+        $filename = $request->input('filename');
+        if (!$filename) {
+            return redirect()->back()->withErrors(['Tidak ada nama file diberikan']);
+        }
+
+        $zipPath = storage_path('app/backups/' . $filename);
+        if (!File::exists($zipPath)) {
+            return redirect()->back()->withErrors(['File tidak ditemukan di storage/backups']);
+        }
+
+        $tmpDir = storage_path('app/backups/restore_' . uniqid());
+        File::makeDirectory($tmpDir, 0755, true);
+
+        $zip = new ZipArchive();
+        $res = $zip->open($zipPath);
+        if ($res === true) {
+            $zip->extractTo($tmpDir);
+            $zip->close();
+        } else {
+            File::deleteDirectory($tmpDir);
+            return redirect()->back()->withErrors(['File zip tidak dapat dibuka (kode: ' . $res . ')']);
+        }
+
+        DB::statement('SET FOREIGN_KEY_CHECKS=0');
+
+        $files = File::files($tmpDir);
+        foreach ($files as $f) {
+            $table = pathinfo($f->getFilename(), PATHINFO_FILENAME);
+            $content = File::get($f->getPathname());
+            $rows = json_decode($content, true);
+            if (is_array($rows)) {
+                DB::table($table)->truncate();
+                if (count($rows) > 0) {
+                    $chunks = array_chunk($rows, 1000);
+                    foreach ($chunks as $chunk) {
+                        DB::table($table)->insert($chunk);
+                    }
+                }
+            }
+        }
+
+        DB::statement('SET_FOREIGN_KEY_CHECKS=1');
+
+        File::deleteDirectory($tmpDir);
+
+        return redirect()->back()->with(['message' => 'Restore from storage selesai']);
+    }
+
+    // Restore by accepting raw binary stream (application/octet-stream) in request body
+    // Use curl: curl --data-binary @backup.zip "http://host/admin/settings/restore-stream?filename=backup.zip"
+    public function restoreFromStream(Request $request) {
+        $filename = $request->query('filename') ?? $request->header('X-Filename');
+        if (!$filename) {
+            return response()->json(['error' => 'filename required'], 400);
+        }
+
+        $zipPath = storage_path('app/backups/' . basename($filename));
+
+        // Read raw body
+        $content = $request->getContent();
+
+        if ($content === false || strlen($content) === 0) {
+            Log::error('restoreFromStream: empty body');
+            return response()->json(['error' => 'empty body'], 400);
+        }
+
+        try {
+            File::put($zipPath, $content);
+        } catch (\Exception $e) {
+            Log::error('restoreFromStream: write failed', ['err' => $e->getMessage()]);
+            return response()->json(['error' => 'failed to write file'], 500);
+        }
+
+        Log::info('restoreFromStream saved', ['path' => $zipPath, 'size' => File::size($zipPath)]);
+
+        // reuse restoreFromStorage logic by creating a fake request
+        $fake = new Request();
+        $fake->replace(['filename' => basename($filename)]);
+
+        return $this->restoreFromStorage($fake);
     }
 }

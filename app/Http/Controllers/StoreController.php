@@ -200,6 +200,7 @@ class StoreController extends Controller
             ->withSum(['stocks as valid_stock' => function ($query) {
                 $query->validAvailable();
             }], 'quantity')
+            ->orderBy('created_at', 'DESC')
             ->paginate(20);
 
         return response()->json([
