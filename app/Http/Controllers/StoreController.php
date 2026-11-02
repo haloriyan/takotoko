@@ -175,19 +175,26 @@ class StoreController extends Controller
         $user = $request->user();
         $storeID = $user->access->store_id;
         $categoryID = $request->category_id;
+        $q = $request->q;
         $canAdd = false;
+        $sort = $request->sort ?? "LATEST"; // Enums : LATEST, CHEAPEST, BEST_SELLER, LOW_STOCK
+        // This code by default is LATEST. CHEAPEST based on `products.price`. BEST_SELLER based on last 30 days sales (sales_items). LOW_STOCK is based on accumulated as in valid_stock
 
         $plan = $user->access->store->active_plan;
         $thePlan = config('plans')[$plan->plan];
 
         if (gettype($thePlan['produk']) == "integer") {
-            $productsCount = Product::where('store_id', $storeID)->get(['id'])->count();
+            $productsCount = Product::where('store_id', $storeID)->count();
             $canAdd = $productsCount < $thePlan['produk'];
         } else {
             $canAdd = true;
         }
 
-        $prod = Product::where('store_id', $user->access->store_id);
+        $prod = Product::where('store_id', $storeID);
+
+        if ($q != "") {
+            $prod = $prod->where('name', 'LIKE', '%'.$q.'%');
+        }
 
         if ($categoryID) {
             $prod = $prod->whereHas('categories', function ($query) use ($categoryID) {
@@ -195,13 +202,43 @@ class StoreController extends Controller
             });
         }
 
-        $products = $prod
+        $prod = $prod
             ->with(['images', 'categories'])
             ->withSum(['stocks as valid_stock' => function ($query) {
                 $query->validAvailable();
-            }], 'quantity')
-            ->orderBy('created_at', 'DESC')
-            ->paginate(20);
+            }], 'quantity');
+
+        switch ($sort) {
+            case 'CHEAPEST':
+                $prod->orderBy('price', 'ASC');
+                break;
+
+            case 'BEST_SELLER':
+                $prod->withSum(['sales_items as sold_quantity' => function ($query) use ($storeID) {
+                    $query->where('store_id', $storeID)
+                        ->whereHas('sales', function ($sales) {
+                            $sales->where('created_at', '>=', now()->subDays(30))
+                                ->where('created_at', '<=', now());
+                        });
+                }], 'quantity');
+
+                $prod->orderByRaw('COALESCE(sold_quantity, 0) DESC');
+                break;
+
+            case 'LOW_STOCK':
+                $prod->orderByRaw('COALESCE(valid_stock, 0) ASC');
+                break;
+
+            case 'LATEST':
+            default:
+                $prod->orderBy('created_at', 'DESC');
+                break;
+        }
+
+        // Consistent ordering when multiple products have the same value.
+        $prod->orderBy('id', 'DESC');
+
+        $products = $prod->paginate(20);
 
         return response()->json([
             'products' => $products,
@@ -259,6 +296,9 @@ class StoreController extends Controller
         }
         if ($paymentStatus != "null") {
             array_push($filter, ['payment_status', $paymentStatus]);
+        }
+        if ($request->user_id) {
+            array_push($filter, ['user_id', $request->user_id]);
         }
 
         $query = Sales::where($filter)

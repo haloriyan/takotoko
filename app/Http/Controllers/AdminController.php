@@ -183,34 +183,41 @@ class AdminController extends Controller
         $attempts = [];
 
         // 1) default storeAs
+        Log::info("1. Handling uploaded zip");
         try {
             $stored = $file->storeAs('backups', $name);
             $attempts['storeAs'] = $stored;
         } catch (\Exception $e) {
             $attempts['storeAs_exception'] = $e->getMessage();
+            Log::info($e->getMessage());
         }
 
         // 2) try move()
+        Log::info("2. Moving");
         if (!File::exists($zipPath) || !is_readable($zipPath)) {
             try {
                 $moved = $file->move(storage_path('app/backups'), $name);
                 $attempts['move'] = $moved ? 'ok' : 'failed';
             } catch (\Exception $e) {
                 $attempts['move_exception'] = $e->getMessage();
+                Log::info($e->getMessage());
             }
         }
 
         // 3) try copy via real path
+        Log::info("3. Copy via real path");
         if ((!File::exists($zipPath) || !is_readable($zipPath)) && $file->getRealPath()) {
             try {
                 File::copy($file->getRealPath(), $zipPath);
                 $attempts['copy_realpath'] = 'ok';
             } catch (\Exception $e) {
                 $attempts['copy_realpath_exception'] = $e->getMessage();
+                Log::info($e->getMessage());
             }
         }
 
         // 4) try stream copy as last resort
+        Log::info("4. Stream copy as last resort");
         if (!File::exists($zipPath) || !is_readable($zipPath)) {
             try {
                 $streamIn = $file->openFile('r');
@@ -222,14 +229,17 @@ class AdminController extends Controller
                 $attempts['stream_copy'] = 'ok';
             } catch (\Exception $e) {
                 $attempts['stream_copy_exception'] = $e->getMessage();
+                Log::info($e->getMessage());
             }
         }
 
         // Diagnostic logging
+        Log::info("5. Diagnostic logging");
         try {
             $size = File::exists($zipPath) ? File::size($zipPath) : null;
         } catch (\Exception $e) {
             $size = null;
+            Log::info($e->getMessage());
         }
         
         $tmpDir = storage_path('app/backups/restore_' . uniqid());
@@ -245,9 +255,12 @@ class AdminController extends Controller
         $zip = new ZipArchive();
         $res = $zip->open($zipPath);
         if ($res === true) {
+            Log::info("Extracting " . $zipPath);
             $zip->extractTo($tmpDir);
             $zip->close();
         } else {
+            Log::info("Deleting " . $zipPath);
+            Log::info("Deleting " . $tmpDir);
             File::delete($zipPath);
             File::deleteDirectory($tmpDir);
             return redirect()->back()->withErrors(['File zip tidak valid (kode: ' . $res . ')']);
@@ -274,6 +287,21 @@ class AdminController extends Controller
 
         DB::statement('SET FOREIGN_KEY_CHECKS=1');
 
+        // Restore public/storage files
+        $backupStorage = $tmpDir . '/public_storage';
+        $publicStorage = public_path('storage');
+
+        if (File::exists($backupStorage)) {
+            // Ensure destination exists
+            File::ensureDirectoryExists($publicStorage);
+
+            // Copy all files and directories recursively
+            File::copyDirectory($backupStorage, $publicStorage);
+
+            Log::info("Public storage restored successfully");
+        }
+
+        Log::info("Deleting files and temps");
         File::delete($zipPath);
         File::deleteDirectory($tmpDir);
 

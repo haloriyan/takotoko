@@ -39,6 +39,8 @@ class StockistController extends Controller
         ])
         ->orderBy('updated_at', 'DESC')
         ->paginate(25);
+
+        Log::info($startDate);
         
         $products->map(function ($prod, $p) {
             $prod->quantity = 0;
