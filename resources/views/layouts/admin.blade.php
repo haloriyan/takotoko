@@ -115,6 +115,11 @@
                 <ion-icon name="ellipse-outline" class="text-[8px] {{ (@$routes[2] == 'geminiKeys') ? 'text-primary' : '' }}"></ion-icon>
                 <div class="text-sm flex grow {{ (@$routes[2] == 'geminiKeys') ? 'text-primary' : '' }}">Gemini Keys</div>
             </a>
+            <a href="{{ route('admin.settings.tripay') }}" class="flex items-center gap-4 text-slate-500">
+                <div class="h-10 w-1 bg-white"></div>
+                <ion-icon name="ellipse-outline" class="text-[8px] {{ (@$routes[2] == 'tripay') ? 'text-primary' : '' }}"></ion-icon>
+                <div class="text-sm flex grow {{ (@$routes[2] == 'tripay') ? 'text-primary' : '' }}">Tripay</div>
+            </a>
             <a href="{{ route('admin.settings.backup') }}" class="flex items-center gap-4 text-slate-500">
                     <div class="h-10 w-1 bg-white"></div>
                     <ion-icon name="ellipsis-horizontal-outline" class="text-[8px] {{ @$routes[2] == 'backup' ? 'text-primary' : '' }}"></ion-icon>

@@ -38,6 +38,11 @@ Route::group(['prefix' => "admin"], function () {
                 Route::get('/', [AdminController::class, 'geminiKeys'])->name('admin.settings.geminiKeys');
             });
 
+            Route::group(['prefix' => "tripay"], function () {
+                Route::get('mode/{mode?}', [AdminController::class, 'tripayMode'])->name('admin.settings.tripay.mode');
+                Route::match(['get', 'post'], '/', [AdminController::class, 'tripaySettings'])->name('admin.settings.tripay');
+            });
+
             Route::match(['get', 'post'], 'backup', [AdminController::class, 'backupSettings'])->name('admin.settings.backup');
             Route::post('restore', [AdminController::class, 'restoreSettings'])->name('admin.settings.restore');
             Route::post('restore-file', [AdminController::class, 'restoreFromStorage'])->name('admin.settings.restore.file');

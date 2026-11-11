@@ -393,4 +393,41 @@ class AdminController extends Controller
 
         return $this->restoreFromStorage($fake);
     }
+
+    public function tripaySettings(Request $request) {
+        if ($request->method() == "GET") {
+            $message = Session::get('message');
+            return view('admin.settings.tripay', [
+                'message' => $message,
+            ]);
+        } else {
+            $mode = env('TRIPAY_MODE');
+            $keysToChange = [
+                'TRIPAY_MERCHANT_CODE',
+                'TRIPAY_API_KEY',
+                'TRIPAY_PRIVATE_KEY'
+            ];
+
+            foreach ($keysToChange as $key) {
+                changeEnv($key, $request->{$key});
+            }
+
+            return redirect()->back()->with([
+                'message' => "Berhasil menyimpan pengaturan Tripay"
+            ]);
+        }
+    }
+    public function tripayMode($mode = null) {
+        if ($mode == null) {
+            return response()->json([
+                'mode' => env('TRIPAY_MODE')
+            ]);
+        } else {
+            changeEnv('TRIPAY_MODE', strtolower($mode));
+        
+            return redirect()->back()->with([
+                'message' => "Berhasil mengubah mode Tripay"
+            ]);
+        }
+    }
 }
